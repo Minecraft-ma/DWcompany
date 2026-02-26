@@ -1,0 +1,92 @@
+# ========================================
+# DWcompany Plugin Configuration
+# Version: 1.0
+# ========================================
+
+# Company Settings
+companies:
+  # Maximum companies a player can own (default: 2)
+  max-per-player: 2
+
+  # Creation costs
+  creation-cost:
+    first: 100000.0    # Cost for first company
+    second: 500000.0   # Cost for second company
+
+  # Member limits
+  member-limits:
+    national: 5        # Max members for National companies
+    international: 10  # Max members for International companies
+
+  # Cost to upgrade to International status
+  international-upgrade-cost: 20000.0
+
+# Level System Settings
+levels:
+  # Money required for each level
+  level-1-money: 0
+  level-2-money: 10000
+  level-3-money: 50000
+  level-4-money: 100000
+  level-5-money: 250000
+  level-6-money: 500000
+  level-7-money: 1000000
+
+  # Materials for level icons in GUI
+  materials:
+    level-1: COBBLESTONE
+    level-2: IRON_BLOCK
+    level-3: GOLD_BLOCK
+    level-4: DIAMOND_BLOCK
+    level-5: EMERALD_BLOCK
+    level-6: OBSIDIAN
+    level-7: NETHERITE_BLOCK
+
+# Storage Settings
+storage:
+  # Storage type: YAML or MYSQL
+  type: YAML
+
+  # MySQL settings (only used if type is MYSQL)
+  mysql:
+    host: localhost
+    port: 3306
+    database: dwcompany
+    username: root
+    password: ''
+    table-prefix: dwc_
+
+# Auto-save Settings
+autosave:
+  enabled: true
+  interval-minutes: 15
+
+# Backup Settings
+backup:
+  enabled: true
+  max-backups: 10
+
+# Sound Settings
+sounds:
+  enabled: true
+  button-click: UI_BUTTON_CLICK
+  success: ENTITY_PLAYER_LEVELUP
+  error: ENTITY_VILLAGER_NO
+  deposit: ENTITY_EXPERIENCE_ORB_PICKUP
+  withdraw: ENTITY_EXPERIENCE_ORB_PICKUP
+
+# Dynmap Settings
+dynmap:
+  enabled: true
+  marker-icon: building
+  marker-set-label: "Company Headquarters"
+
+# GUI Settings
+gui:
+  # Number of companies per page in list GUI
+  companies-per-page: 45
+
+# Bank Settings
+bank:
+  # Allow all members to withdraw (not just CEO)
+  allow-member-withdraw: false

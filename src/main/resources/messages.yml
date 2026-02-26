@@ -1,0 +1,145 @@
+# ========================================
+# DWcompany Plugin Messages
+# Version: 1.0
+# Use & for color codes
+# Placeholders: {player}, {company}, {amount}, {balance}, etc.
+# ========================================
+
+# General Messages
+prefix: '&6[DWcompany] '
+
+general:
+  no-permission: '&cYou don''t have permission to do this.'
+  player-only: '&cThis command can only be used by players.'
+  invalid-args: '&cInvalid arguments. Use /entreprise help for help.'
+  success: '&aOperation successful!'
+  error: '&cAn error occurred.'
+  not-in-company: '&cYou are not in a company.'
+  already-in-company: '&cYou are already in a company.'
+  company-not-found: '&cCompany not found.'
+  not-ceo: '&cOnly the CEO can do this.'
+  loading: '&eLoading...'
+
+# Company Creation
+company:
+  created: '&aCompany &l{company} &ahas been created! You are now the CEO.'
+  create-cost: '&7Creation cost: &c${cost}'
+  already-exists: '&cA company with this name already exists.'
+  invalid-name: '&cInvalid company name. Use 3-20 alphanumeric characters.'
+  max-companies: '&cYou can only own a maximum of {max} companies.'
+  deleted: '&cCompany &l{company} &chas been deleted.'
+  delete-confirm: '&cType &e/entreprise delete confirm &cto confirm deletion.'
+  transfer-success: '&aOwnership transferred to &l{player}&a.'
+  transfer-received: '&aYou are now the CEO of &l{company}&a!'
+
+# Economy
+economy:
+  not-enough-money: '&cYou need &l${required} &cto do this.'
+  not-enough-balance: '&cThe company doesn''t have enough funds.'
+  vault-not-found: '&cEconomy system not available.'
+
+# Join/Leave
+join:
+  request-sent: '&aJoin request sent to &l{company}&a.'
+  request-received: '&e{player} &ewants to join your company.'
+  request-denied: '&cYour join request was denied.'
+  player-joined: '&a&l{player} &ahas joined your company!'
+  you-joined: '&aYou have joined &l{company}&a!'
+  company-full: '&cThis company is full. Maximum members reached.'
+  cooldown: '&cPlease wait {seconds} seconds before sending another request.'
+
+leave:
+  left: '&aYou have left the company &l{company}&a.'
+  ceo-transfer-required: '&cAs CEO, you must transfer ownership before leaving.'
+  ceo-delete-required: '&cAs CEO, you must delete the company or transfer ownership.'
+  player-left: '&e{player} &ehas left your company.'
+
+# Bank
+bank:
+  deposit-success: '&aDeposited &l${amount}&a. New balance: &a${balance}'
+  withdraw-success: '&aWithdrawn &l${amount}&a. New balance: &a${balance}'
+  balance: '&7Balance: &a${balance}'
+  total-earned: '&7Total Earned: &a${amount}'
+  deposit-only-ceo: '&cOnly the CEO can deposit.'
+  withdraw-only-ceo: '&cOnly the CEO can withdraw.'
+  invalid-amount: '&cInvalid amount.'
+
+# Status (National/International)
+status:
+  already-national: '&cYour company is already National.'
+  already-international: '&cYour company is already International.'
+  upgraded-international: '&6&l{company} &6is now International!'
+  international-cost: '&7Cost: &c${cost}'
+  international-benefits: '&aMember limit increased to {max}!'
+  confirm-upgrade: '&cType &e/entreprise international confirm &cto upgrade.'
+
+# Headquarters
+hq:
+  set: '&aHeadquarters set! Location: &f{location}'
+  marker-added: '&7Marker added to Dynmap.'
+  marker-removed: '&7Marker removed from Dynmap.'
+  dynmap-not-found: '&cDynmap not found. Markers disabled.'
+
+# Subsidiaries
+subsidiary:
+  created: '&aSubsidiary &l{company} &ahas been created!'
+  added: '&a&l{company} &ais now a subsidiary!'
+  removed: '&aRemoved &l{company} &aas subsidiary.'
+  already-subsidiary: '&cThis company is already a subsidiary.'
+  cannot-subsidiary-self: '&cA company cannot be its own subsidiary.'
+
+# GUI
+gui:
+  titles:
+    company-list: '&6&lCompanies'
+    company-details: '&6&l{company}'
+    bank: '&6&lCompany Bank - {company}'
+    management: '&c&lManage - {company}'
+  buttons:
+    next-page: '&eNext Page'
+    previous-page: '&ePrevious Page'
+    close: '&cClose'
+    back: '&cBack'
+    confirm: '&aConfirm'
+    cancel: '&cCancel'
+
+# Members
+members:
+  list-header: '&6Members of &l{company}'
+  ceo-label: '&7CEO: &6{player}'
+  member-label: '&7- &f{player}'
+  total: '&7Total: &f{count}/{max} members'
+  kicked: '&aKicked &l{player} &afrom your company.'
+  you-were-kicked: '&cYou have been kicked from &l{company}&c.'
+
+# Admin
+admin:
+  reload-success: '&aPlugin reloaded successfully!'
+  reload-error: '&cError reloading plugin. Check console.'
+  company-deleted: '&cCompany &l{company} &chas been deleted by an admin.'
+  backup-created: '&aBackup created successfully.'
+  backup-error: '&cFailed to create backup.'
+
+# Help
+help:
+  header: '&6===== DWcompany Help ====='
+  footer: '&6========================'
+  commands:
+    - '&e/entreprise &7- Open company list GUI'
+    - '&e/entreprise create <name> &7- Create a new company'
+    - '&e/entreprise join <company> &7- Request to join a company'
+    - '&e/entreprise leave &7- Leave your company'
+    - '&e/entreprise bank &7- Open bank GUI'
+    - '&e/entreprise bank deposit <amount> &7- Deposit money'
+    - '&e/entreprise bank withdraw <amount> &7- Withdraw money'
+    - '&e/entreprise batiment &7- Set company headquarters'
+    - '&e/entreprise international &7- Upgrade to International'
+    - '&e/entreprise filiale create <name> &7- Create a subsidiary'
+    - '&e/entreprise filiale add <company> &7- Add a subsidiary'
+    - '&e/entreprise info [company] &7- View company info'
+    - '&e/entreprise members &7- List company members'
+    - '&e/entreprise transfer <player> &7- Transfer CEO role'
+    - '&e/entreprise manage &7- Open management GUI'
+    - '&e/entreprise delete &7- Delete your company'
+    - '&e/entreprise reload &7- Reload plugin (admin)'
+    - '&e/entreprise help &7- Show this help'

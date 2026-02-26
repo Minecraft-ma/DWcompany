@@ -1,0 +1,51 @@
+name: DWcompany
+version: '${project.version}'
+main: fr.dominatuin.dwcompany.DWcompany
+api-version: '1.16'
+description: A complete company management plugin for Minecraft with Dynmap support
+author: Dominatuin
+softdepend: [Vault, Essentials, dynmap]
+
+commands:
+  entreprise:
+    description: Main command for company management
+    usage: /<command> [create|join|leave|bank|filiale|batiment|national|international|list|info|delete|transfer]
+    aliases: [company, ent, comp]
+
+permissions:
+  dwcompany.use:
+    description: Allows using basic company commands
+    default: true
+  dwcompany.create:
+    description: Allows creating a company (costs 100k-500k)
+    default: true
+  dwcompany.join:
+    description: Allows joining a company
+    default: true
+  dwcompany.leave:
+    description: Allows leaving a company
+    default: true
+  dwcompany.bank.deposit:
+    description: Allows depositing to company bank
+    default: true
+  dwcompany.bank.withdraw:
+    description: Allows withdrawing from company bank
+    default: false
+  dwcompany.filiale.create:
+    description: Allows creating subsidiaries
+    default: false
+  dwcompany.filiale.add:
+    description: Allows adding subsidiaries
+    default: false
+  dwcompany.batiment:
+    description: Allows setting company headquarters with Dynmap markers
+    default: false
+  dwcompany.status.change:
+    description: Allows changing National/International status
+    default: false
+  dwcompany.admin:
+    description: Allows admin operations on any company
+    default: op
+  dwcompany.ceo:
+    description: CEO permissions for company management
+    default: false
