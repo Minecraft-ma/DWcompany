@@ -473,7 +473,7 @@ public class CompanyGUI implements Listener {
             return;
         }
 
-        Player player = (Player) event.getWhoClicked();
+        Player player = event.getWhoClicked();
         String title = event.getView().getTitle();
 
         // Check if this is one of our GUIs

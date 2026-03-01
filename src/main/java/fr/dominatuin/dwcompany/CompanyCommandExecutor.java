@@ -23,6 +23,7 @@ public class CompanyCommandExecutor implements CommandExecutor, TabCompleter {
     private final CompanyGUI companyGUI;
     private final MainMenuGUI mainMenuGUI;
     private final DynmapManager dynmapManager;
+    private final CompanyStats companyStats;
 
     // Message constants
     private static final String MSG_COMPANY_NOT_FOUND = "§cCompany not found.";
@@ -61,6 +62,7 @@ public class CompanyCommandExecutor implements CommandExecutor, TabCompleter {
         this.companyGUI = companyGUI;
         this.mainMenuGUI = mainMenuGUI;
         this.dynmapManager = dynmapManager;
+        this.companyStats = new CompanyStats(companyManager);
         this.joinRequestCooldowns = new HashMap<>();
     }
 
@@ -96,6 +98,9 @@ public class CompanyCommandExecutor implements CommandExecutor, TabCompleter {
             case "international": return handleStatus(player, args);
             case "list": return handleList(player);
             case "info": return handleInfo(player, args);
+            case "stats": return handleStats(player, args);
+            case "top": return handleTop(player, args);
+            case "network": return handleNetwork(player);
             case "delete": return handleDelete(player, args);
             case "transfer": return handleTransfer(player, args);
             case "members": return handleMembers(player);
@@ -124,23 +129,41 @@ public class CompanyCommandExecutor implements CommandExecutor, TabCompleter {
 
         String name = args[1];
 
-        // Validate name
         if (!isValidCompanyName(name)) {
             player.sendMessage("§cInvalid company name. Use 3-20 alphanumeric characters.");
             return true;
         }
 
-        // Check if already in company
         if (companyManager.isInCompany(player.getUniqueId())) {
             player.sendMessage("§cYou are already in a company. Leave it first with /entreprise leave");
             return true;
         }
 
-        // Create company
+        // Check company limit (2 max)
+        int ownedCount = companyManager.getPlayerCompanyCount(player.getUniqueId());
+        if (ownedCount >= 2) {
+            player.sendMessage("§cYou can only own 2 companies maximum.");
+            return true;
+        }
+
+        // Calculate cost based on owned companies
+        double cost = ownedCount == 0 ? 100000.0 : 500000.0;
+        
+        if (!economyManager.hasEnough(player, cost)) {
+            player.sendMessage("§cYou need §l" + economyManager.formatMoney(cost) + " §cto create this company.");
+            player.sendMessage("§7" + (ownedCount == 0 ? "First" : "Second") + " company cost: " + economyManager.formatMoney(cost));
+            return true;
+        }
+
+        // Withdraw cost
+        economyManager.getEconomy().withdrawPlayer(player, cost);
+
         if (companyManager.createCompany(name, player.getUniqueId(), player.getName())) {
             player.sendMessage("§aCompany §l" + name + " §ahas been created! You are now the CEO.");
+            player.sendMessage("§7Cost: §c" + economyManager.formatMoney(cost));
             player.sendMessage("§eUse /entreprise manage to open the management menu.");
         } else {
+            economyManager.getEconomy().depositPlayer(player, cost);
             player.sendMessage("§cA company with this name already exists or the name is invalid.");
         }
 
@@ -332,7 +355,7 @@ public class CompanyCommandExecutor implements CommandExecutor, TabCompleter {
 
     private boolean handleFiliale(Player player, String[] args) {
         if (args.length < 2) {
-            player.sendMessage("§cUsage: /entreprise filiale <create|add>");
+            player.sendMessage("§cUsage: /entreprise filiale <create|add|remove|list>");
             return true;
         }
 
@@ -344,7 +367,6 @@ public class CompanyCommandExecutor implements CommandExecutor, TabCompleter {
             return true;
         }
 
-        // Check if CEO
         if (!company.isCEO(player.getUniqueId()) && !player.hasPermission("dwcompany.filiale.create")) {
             player.sendMessage("§cOnly the CEO can manage subsidiaries.");
             return true;
@@ -357,6 +379,12 @@ public class CompanyCommandExecutor implements CommandExecutor, TabCompleter {
                     return true;
                 }
 
+                // Check subsidiary limit (5 max)
+                if (company.getSubsidiaries().size() >= 5) {
+                    player.sendMessage("§cYou can only have 5 subsidiaries maximum.");
+                    return true;
+                }
+
                 String newFilialeName = args[2];
 
                 if (!isValidCompanyName(newFilialeName)) {
@@ -364,13 +392,11 @@ public class CompanyCommandExecutor implements CommandExecutor, TabCompleter {
                     return true;
                 }
 
-                // Create subsidiary as a new company
                 if (companyManager.createCompany(newFilialeName, player.getUniqueId(), player.getName())) {
-                    // Set parent relationship
                     companyManager.addSubsidiary(company.getName(), newFilialeName);
-
                     player.sendMessage("§aSubsidiary §l" + newFilialeName + " §ahas been created!");
                     player.sendMessage("§7Parent company: §f" + company.getName());
+                    player.sendMessage("§7Subsidiaries: §f" + company.getSubsidiaries().size() + "/5");
                 } else {
                     player.sendMessage("§cA company with this name already exists.");
                 }
@@ -379,6 +405,12 @@ public class CompanyCommandExecutor implements CommandExecutor, TabCompleter {
             case "add":
                 if (args.length < 3) {
                     player.sendMessage("§cUsage: /entreprise filiale add <company>");
+                    return true;
+                }
+
+                // Check subsidiary limit (5 max)
+                if (company.getSubsidiaries().size() >= 5) {
+                    player.sendMessage("§cYou can only have 5 subsidiaries maximum.");
                     return true;
                 }
 
@@ -400,11 +432,10 @@ public class CompanyCommandExecutor implements CommandExecutor, TabCompleter {
                     return true;
                 }
 
-                // Add subsidiary relationship
                 if (companyManager.addSubsidiary(company.getName(), targetCompanyName)) {
                     player.sendMessage("§a§l" + targetCompanyName + " §ais now a subsidiary of §l" + company.getName() + "§a!");
+                    player.sendMessage("§7Subsidiaries: §f" + company.getSubsidiaries().size() + "/5");
 
-                    // Notify target CEO
                     Player targetCEO = Bukkit.getPlayer(targetCompany.getCeoUUID());
                     if (targetCEO != null && targetCEO.isOnline()) {
                         targetCEO.sendMessage("§eYour company is now a subsidiary of §l" + company.getName() + "§e.");
@@ -428,13 +459,14 @@ public class CompanyCommandExecutor implements CommandExecutor, TabCompleter {
 
                 if (companyManager.removeSubsidiary(company.getName(), removeName)) {
                     player.sendMessage("§aRemoved §l" + removeName + " §aas your subsidiary.");
+                    player.sendMessage("§7Subsidiaries: §f" + company.getSubsidiaries().size() + "/5");
                 } else {
                     player.sendMessage("§cFailed to remove subsidiary.");
                 }
                 break;
 
             case "list":
-                player.sendMessage("§6Subsidiaries of §l" + company.getName());
+                player.sendMessage("§6Subsidiaries of §l" + company.getName() + " §6(" + company.getSubsidiaries().size() + "/5)");
                 if (company.getSubsidiaries().isEmpty()) {
                     player.sendMessage("§7No subsidiaries.");
                 } else {
@@ -978,9 +1010,12 @@ public class CompanyCommandExecutor implements CommandExecutor, TabCompleter {
         player.sendMessage("§e/entreprise bank withdraw <amount> §7- Withdraw money (CEO only)");
         player.sendMessage("§e/entreprise batiment §7- Set company headquarters");
         player.sendMessage("§e/entreprise international §7- Upgrade to International (20k)");
-        player.sendMessage("§e/entreprise filiale create <name> §7- Create a subsidiary");
+        player.sendMessage("§e/entreprise filiale create <name> §7- Create a subsidiary (5 max)");
         player.sendMessage("§e/entreprise filiale add <company> §7- Add a subsidiary");
         player.sendMessage("§e/entreprise info [company] §7- View company info");
+        player.sendMessage("§e/entreprise stats [company] §7- View detailed statistics");
+        player.sendMessage("§e/entreprise top [earnings|members] §7- View top companies");
+        player.sendMessage("§e/entreprise network §7- View your company network");
         player.sendMessage("§e/entreprise members §7- List company members");
         player.sendMessage("§e/entreprise transfer <player> §7- Transfer CEO role");
         player.sendMessage("§e/entreprise manage §7- Open management GUI (CEO)");
@@ -993,6 +1028,110 @@ public class CompanyCommandExecutor implements CommandExecutor, TabCompleter {
             player.sendMessage("§c/entreprise admin delete <company> §7- Delete any company");
         }
 
+        return true;
+    }
+
+    private boolean handleStats(Player player, String[] args) {
+        String targetCompany;
+
+        if (args.length < 2) {
+            Company company = companyManager.getPlayerCompany(player.getUniqueId());
+            if (company == null) {
+                player.sendMessage("§cYou are not in a company. Specify a company name.");
+                return true;
+            }
+            targetCompany = company.getName();
+        } else {
+            targetCompany = args[1];
+        }
+
+        Company company = companyManager.getCompany(targetCompany);
+        if (company == null) {
+            player.sendMessage("§cCompany not found.");
+            return true;
+        }
+
+        Map<String, Object> stats = companyStats.getFullStats(company);
+        
+        player.sendMessage("§6======== §l" + company.getName() + " Statistics §6========");
+        player.sendMessage("§7Rank: §f#" + stats.get("rank"));
+        player.sendMessage("§7Performance Score: §e" + stats.get("performanceScore") + "/100");
+        player.sendMessage("§7Growth Rate: " + stats.get("growthRate"));
+        player.sendMessage("§7Average per Member: §a" + economyManager.formatMoney((double)stats.get("avgMemberEarnings")));
+        player.sendMessage("§e--- Network Stats ---");
+        player.sendMessage("§7Network Value: §a" + economyManager.formatMoney((double)stats.get("networkValue")));
+        player.sendMessage("§7Network Earnings: §a" + economyManager.formatMoney((double)stats.get("networkEarnings")));
+        player.sendMessage("§7Network Members: §f" + stats.get("networkMembers"));
+        
+        if ((boolean)stats.get("isTop10")) {
+            player.sendMessage("§6§l⭐ TOP 10 COMPANY!");
+        }
+
+        return true;
+    }
+
+    private boolean handleTop(Player player, String[] args) {
+        String type = args.length > 1 ? args[1].toLowerCase() : "earnings";
+        
+        player.sendMessage("§6======== Top 10 Companies ========");
+        
+        List<Company> topCompanies;
+        if (type.equals("members")) {
+            player.sendMessage("§7Sorted by: §fMember Count");
+            topCompanies = companyStats.getTopByMembers(10);
+        } else {
+            player.sendMessage("§7Sorted by: §fTotal Earnings");
+            topCompanies = companyStats.getTopByEarnings(10);
+        }
+        
+        for (int i = 0; i < topCompanies.size(); i++) {
+            Company c = topCompanies.get(i);
+            String medal = i == 0 ? "§6§l🥇" : i == 1 ? "§7§l🥈" : i == 2 ? "§c§l🥉" : "§7";
+            
+            if (type.equals("members")) {
+                player.sendMessage(medal + " #" + (i+1) + " §f" + c.getName() + 
+                    " §7- §f" + c.getMemberCount() + " members");
+            } else {
+                player.sendMessage(medal + " #" + (i+1) + " §f" + c.getName() + 
+                    " §7- §a" + economyManager.formatMoney(c.getTotalMoneyEarned()));
+            }
+        }
+        
+        player.sendMessage("§7Use: /entreprise top [earnings|members]");
+        return true;
+    }
+
+    private boolean handleNetwork(Player player) {
+        Company company = companyManager.getPlayerCompany(player.getUniqueId());
+        if (company == null) {
+            player.sendMessage(MSG_NOT_IN_COMPANY);
+            return true;
+        }
+
+        player.sendMessage("§6======== §l" + company.getName() + " Network §6========");
+        player.sendMessage("§7Status: " + company.getStatusDisplay());
+        player.sendMessage("§7Level: " + company.getLevelColor() + company.getLevel());
+        player.sendMessage("§7Members: §f" + company.getMemberCount() + "/" + company.getMaxMembers());
+        player.sendMessage("§7Balance: §a" + economyManager.formatMoney(company.getBalance()));
+        
+        if (!company.getSubsidiaries().isEmpty()) {
+            player.sendMessage("§e--- Subsidiaries (" + company.getSubsidiaries().size() + "/5) ---");
+            for (String subName : company.getSubsidiaries()) {
+                Company sub = companyManager.getCompany(subName);
+                if (sub != null) {
+                    player.sendMessage("§7├─ §f" + sub.getName() + 
+                        " §7(Lvl " + sub.getLevel() + ", " + 
+                        sub.getMemberCount() + " members, " + 
+                        economyManager.formatMoney(sub.getBalance()) + ")");
+                }
+            }
+        }
+        
+        player.sendMessage("§e--- Network Totals ---");
+        player.sendMessage("§7Total Value: §a" + economyManager.formatMoney(companyStats.getNetworkValue(company)));
+        player.sendMessage("§7Total Earnings: §a" + economyManager.formatMoney(companyStats.getNetworkEarnings(company)));
+        player.sendMessage("§7Total Members: §f" + companyStats.getNetworkMembers(company));
+        
         return true;
     }
 

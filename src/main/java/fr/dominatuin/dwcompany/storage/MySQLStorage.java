@@ -644,9 +644,8 @@ public class MySQLStorage implements StorageProvider {
             Company company = new Company(name, ceoUUID, ceoName);
             
             // Set financial data
-            // Note: These would need setter methods in Company class
-            // company.setBalance(rs.getDouble("balance"));
-            // company.setTotalMoneyEarned(rs.getDouble("total_earned"));
+            company.setBalance(rs.getDouble("balance"));
+            company.setTotalMoneyEarned(rs.getDouble("total_earned"));
             
             // Set headquarters if exists
             if (rs.getBoolean("has_hq")) {
@@ -654,10 +653,7 @@ public class MySQLStorage implements StorageProvider {
                 double x = rs.getDouble("hq_x");
                 double y = rs.getDouble("hq_y");
                 double z = rs.getDouble("hq_z");
-                
-                // Create Location object (would need Bukkit.getWorld())
-                // Location hq = new Location(Bukkit.getWorld(world), x, y, z);
-                // company.setHeadquarters(hq);
+                company.setHeadquarters(world, x, y, z);
             }
             
             // Set status

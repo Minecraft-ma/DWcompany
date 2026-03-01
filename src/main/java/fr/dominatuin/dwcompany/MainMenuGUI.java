@@ -137,7 +137,7 @@ public class MainMenuGUI implements Listener {
             return;
         }
 
-        Player player = (Player) event.getWhoClicked();
+        Player player = event.getWhoClicked();
         String title = event.getView().getTitle();
 
         if (!title.equals("§6§lDWcompany - Main Menu")) {

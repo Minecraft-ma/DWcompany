@@ -6,7 +6,6 @@ import org.bukkit.Material;
 import org.bukkit.World;
 
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Company class representing a business entity in the game.
@@ -162,48 +161,24 @@ public class Company {
      * @return true if member was added successfully, false otherwise
      */
     public boolean addMember(UUID uuid) {
-        if (uuid == null) {
+        if (uuid == null || members.contains(uuid) || members.size() >= maxMembers) {
             return false;
         }
-        if (members.contains(uuid)) {
-            return false; // Already a member
-        }
-        if (members.size() >= maxMembers) {
-            return false; // Member limit reached
-        }
-        return members.add(uuid);
+        members.add(uuid);
+        return true;
     }
 
-    /**
-     * Adds a new member to the company with name.
-     * @param uuid Player UUID to add
-     * @param name Player name (not used in current implementation)
-     * @return true if member was added successfully, false otherwise
-     */
-    public boolean addMember(UUID uuid, String name) {
-        return addMember(uuid); // Name parameter for future use
+    public boolean addMember(UUID uuid, String playerName) {
+        return addMember(uuid);
     }
 
-    /**
-     * Removes a member from the company.
-     * @param uuid Player UUID to remove
-     * @return true if member was removed successfully, false otherwise
-     */
     public boolean removeMember(UUID uuid) {
-        if (uuid == null) {
+        if (uuid == null || uuid.equals(ceoUUID)) {
             return false;
-        }
-        if (uuid.equals(ceoUUID)) {
-            return false; // Cannot remove CEO
         }
         return members.remove(uuid);
     }
 
-    /**
-     * Checks if a player is a member of the company.
-     * @param uuid Player UUID to check
-     * @return true if player is a member, false otherwise
-     */
     public boolean hasMember(UUID uuid) {
         return uuid != null && members.contains(uuid);
     }
@@ -274,6 +249,23 @@ public class Company {
      */
     public double getTotalMoneyEarned() {
         return totalMoneyEarned;
+    }
+
+    /**
+     * Sets the balance directly (for loading from storage).
+     * @param balance New balance
+     */
+    public void setBalance(double balance) {
+        this.balance = balance;
+    }
+
+    /**
+     * Sets total money earned directly (for loading from storage).
+     * @param totalMoneyEarned Total money earned
+     */
+    public void setTotalMoneyEarned(double totalMoneyEarned) {
+        this.totalMoneyEarned = totalMoneyEarned;
+        updateLevel();
     }
 
     // ======== Level Management ========
@@ -491,26 +483,13 @@ public class Company {
         return Collections.unmodifiableSet(subsidiaries);
     }
 
-    /**
-     * Adds a subsidiary company.
-     * @param name Subsidiary company name
-     * @return true if added successfully, false otherwise
-     */
     public boolean addSubsidiary(String name) {
-        if (name == null || name.trim().isEmpty()) {
+        if (name == null || name.trim().isEmpty() || name.equalsIgnoreCase(this.name)) {
             return false;
-        }
-        if (name.equalsIgnoreCase(this.name)) {
-            return false; // Cannot add self as subsidiary
         }
         return subsidiaries.add(name.trim());
     }
 
-    /**
-     * Removes a subsidiary company.
-     * @param name Subsidiary company name
-     * @return true if removed successfully, false otherwise
-     */
     public boolean removeSubsidiary(String name) {
         if (name == null) {
             return false;
@@ -537,35 +516,17 @@ public class Company {
         return Collections.unmodifiableSet(pendingJoinRequests);
     }
 
-    /**
-     * Adds a join request from a player.
-     * @param uuid Player UUID requesting to join
-     * @return true if request was added, false if already exists or invalid
-     */
     public boolean addJoinRequest(UUID uuid) {
-        if (uuid == null) {
-            return false;
+        if (uuid != null && !members.contains(uuid)) {
+            return pendingJoinRequests.add(uuid);
         }
-        if (members.contains(uuid)) {
-            return false; // Already a member
-        }
-        return pendingJoinRequests.add(uuid);
+        return false;
     }
 
-    /**
-     * Removes a join request.
-     * @param uuid Player UUID to remove
-     * @return true if request was removed, false otherwise
-     */
     public boolean removeJoinRequest(UUID uuid) {
         return pendingJoinRequests.remove(uuid);
     }
 
-    /**
-     * Checks if player has a pending join request.
-     * @param uuid Player UUID to check
-     * @return true if request exists, false otherwise
-     */
     public boolean hasJoinRequest(UUID uuid) {
         return uuid != null && pendingJoinRequests.contains(uuid);
     }
@@ -589,8 +550,8 @@ public class Company {
     // ======== Company Status Management ========
 
     /**
-     * Sets company to national status.
-     * Reduces member limit to national limit.
+     * Sets company to National status.
+     * Reduces member limit to National limit.
      */
     public void setNational() {
         this.isInternational = false;
@@ -643,5 +604,4 @@ public class Company {
         return String.format("Company{name=%s, level=%d, members=%d, balance=%.2f}", 
             name, level, members.size(), balance);
     }
-
-    }
+}

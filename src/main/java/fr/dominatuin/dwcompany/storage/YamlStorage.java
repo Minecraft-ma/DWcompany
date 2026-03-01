@@ -127,10 +127,15 @@ public class YamlStorage implements StorageProvider {
 
         Company company = new Company(name, ceoUUID, ceoName);
 
-        // Load balance
+        // Load balance and total earned
         double balance = section.getDouble("balance", 0.0);
+        double totalEarned = section.getDouble("totalEarned", 0.0);
+        
+        if (totalEarned > 0) {
+            company.setTotalMoneyEarned(totalEarned);
+        }
         if (balance > 0) {
-            company.deposit(balance);
+            company.setBalance(balance);
         }
 
         // Load members
