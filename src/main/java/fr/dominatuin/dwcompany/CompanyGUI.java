@@ -13,6 +13,7 @@ import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.SkullMeta;
+import fr.dominatuin.dwcompany.Company;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -229,7 +230,7 @@ public class CompanyGUI implements Listener {
         }
         String companyName = playerCompany.getName();
 
-        Company company = companyManager.getCompany(companyName);
+        Company company = playerCompany;
         if (company == null) {
             player.sendMessage("§cCompany not found.");
             return;
@@ -279,7 +280,7 @@ public class CompanyGUI implements Listener {
         }
         String companyName = playerCompany.getName();
 
-        Company company = companyManager.getCompany(companyName);
+        Company company = playerCompany;
         if (company == null || !company.isCEO(player.getUniqueId())) {
             player.sendMessage("§cOnly the CEO can manage the company.");
             return;

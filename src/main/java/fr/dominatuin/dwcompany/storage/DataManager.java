@@ -4,6 +4,8 @@ import fr.dominatuin.dwcompany.Company;
 import fr.dominatuin.dwcompany.ConfigManager;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitRunnable;
+import org.bukkit.entity.Player;
+import org.bukkit.Bukkit;
 
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
@@ -91,7 +93,7 @@ public class DataManager {
                 case "mysql":
                     String host = configManager.getString("database.mysql.host", "localhost");
                     int port = configManager.getInt("database.mysql.port", 3306);
-                    String database = configManager.getString("database.mysql.database", DEFAULT_TABLE_PREFIX);
+                    String database = configManager.getString("database.mysql.database", "dwcompany");
                     String username = configManager.getString("database.mysql.username", "root");
                     String password = configManager.getString("database.mysql.password", "");
                     String tablePrefix = configManager.getString("database.mysql.table-prefix", DEFAULT_TABLE_PREFIX);

@@ -1,6 +1,7 @@
 package fr.dominatuin.dwcompany;
 
 import fr.dominatuin.dwcompany.storage.DataManager;
+import org.bukkit.Server;
 import org.bukkit.plugin.java.JavaPlugin;
 
 /**
@@ -219,5 +220,10 @@ public final class DWcompany extends JavaPlugin {
      */
     public DynmapManager getDynmapManager() {
         return dynmapManager;
+    }
+    
+    @Override
+    public Server getServer() {
+        return super.getServer();
     }
 }
