@@ -52,15 +52,12 @@ public class MainMenuGUI implements Listener {
     public void openMainMenu(Player player) {
         Inventory gui = Bukkit.createInventory(null, 27, "§6§lDWcompany - Main Menu");
 
-        String playerCompany = companyManager.getPlayerCompany(player.getUniqueId());
+        Company playerCompany = companyManager.getPlayerCompany(player.getUniqueId());
         boolean isInCompany = playerCompany != null;
         boolean isCEO = false;
 
         if (isInCompany) {
-            Company company = companyManager.getCompany(playerCompany);
-            if (company != null) {
-                isCEO = company.isCEO(player.getUniqueId());
-            }
+            isCEO = playerCompany.isCEO(player.getUniqueId());
         }
 
         // Row 1 - Company Actions
@@ -173,9 +170,9 @@ public class MainMenuGUI implements Listener {
 
             case "§6My Company":
                 player.closeInventory();
-                String companyName = companyManager.getPlayerCompany(player.getUniqueId());
-                if (companyName != null) {
-                    companyGUI.openCompanyDetails(player, companyName);
+                Company playerCompany = companyManager.getPlayerCompany(player.getUniqueId());
+                if (playerCompany != null) {
+                    companyGUI.openCompanyDetails(player, playerCompany.getName());
                 }
                 break;
 

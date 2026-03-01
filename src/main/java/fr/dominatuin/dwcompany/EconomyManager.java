@@ -49,7 +49,7 @@ public class EconomyManager {
 
         economy = rsp.getProvider();
         vaultEnabled = true;
-        plugin.getLogger().info("Successfully hooked into Vault economy: " + economy.getName());
+        plugin.getLogger().info(String.format("Successfully hooked into Vault economy: %s", economy.getName()));
         return true;
     }
 

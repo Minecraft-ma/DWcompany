@@ -97,7 +97,7 @@ public class CompanyManager {
      * @param playerUUID The player's UUID
      * @return The company name, or null if not in a company
      */
-    public String getPlayerCompany(UUID playerUUID) {
+    public Company getPlayerCompany(UUID playerUUID) {
         if (dataManager == null) return null;
         return dataManager.getPlayerCompany(playerUUID);
     }
@@ -326,7 +326,7 @@ public class CompanyManager {
      */
     public void saveData() {
         if (dataManager != null) {
-            dataManager.saveAllCompanies(true);
+            dataManager.saveData();
         }
     }
 
@@ -335,7 +335,7 @@ public class CompanyManager {
      */
     public void saveDataAsync() {
         if (dataManager != null) {
-            dataManager.saveAllCompaniesAsync();
+            dataManager.saveDataAsync();
         }
     }
 }

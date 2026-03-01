@@ -36,7 +36,7 @@ public final class DWcompany extends JavaPlugin {
         // Log startup message
         getLogger().info("===================================");
         getLogger().info("DWcompany Plugin Starting...");
-        getLogger().info("Version: " + getDescription().getVersion());
+        getLogger().info(String.format("Version: %s", getDescription().getVersion()));
         getLogger().info("===================================");
 
         // Initialize managers
@@ -107,7 +107,7 @@ public final class DWcompany extends JavaPlugin {
             return true;
 
         } catch (Exception e) {
-            getLogger().severe("Error initializing managers: " + e.getMessage());
+            getLogger().severe(String.format("Error initializing managers: %s", e.getMessage()));
             e.printStackTrace();
             return false;
         }
@@ -141,7 +141,7 @@ public final class DWcompany extends JavaPlugin {
             getLogger().info("Plugin reloaded successfully!");
             return true;
         } catch (Exception e) {
-            getLogger().severe("Error reloading plugin: " + e.getMessage());
+            getLogger().severe(String.format("Error reloading plugin: %s", e.getMessage()));
             e.printStackTrace();
             return false;
         }

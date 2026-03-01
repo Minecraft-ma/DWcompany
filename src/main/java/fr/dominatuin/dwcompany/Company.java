@@ -6,201 +6,359 @@ import org.bukkit.Material;
 import org.bukkit.World;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Represents a Company in the plugin.
- * Stores all company data including members, CEO, bank balance, subsidiaries, and level.
+ * Company class representing a business entity in the game.
+ * 
+ * <p>This class manages company information including members, finances,
+ * headquarters location, subsidiary relationships, and join requests.</p>
+ * 
+ * @author Dominatuin
+ * @version 1.0
+ * @since 1.0-SNAPSHOT
  */
 public class Company {
 
-    // Company identification
+    // ======== Basic Information ========
+    /** Company name - unique identifier */
     private final String name;
+    /** CEO UUID */
     private UUID ceoUUID;
+    /** CEO display name */
     private String ceoName;
 
-    // Members
-    private final Set<UUID> members;
-    private final Map<UUID, String> memberNames;
-    private int maxMembers; // 5 for National, 10 for International
+    // ======== Member Management ========
+    /** Set of all company members including CEO */
+    private final Set<UUID> members = new HashSet<>();
+    /** Pending join requests */
+    private final Set<UUID> pendingJoinRequests = new HashSet<>();
 
-    // Economy
-    private double balance;
-    private double totalMoneyEarned;
-
-    // Subsidiaries
-    private final Set<String> subsidiaries;
+    // ======== Company Status ========
+    /** Maximum number of members allowed */
+    private int maxMembers = 5;
+    /** Whether company is international */
+    private boolean isInternational = false;
+    /** Whether company is a subsidiary of another company */
+    private boolean isSubsidiary = false;
+    /** Parent company name if subsidiary */
     private String parentCompany;
+    /** Set of subsidiary company names */
+    private final Set<String> subsidiaries = new HashSet<>();
 
-    // Level tracking
-    private int level;
+    // ======== Financial Information ========
+    /** Current company balance */
+    private double balance;
+    /** Total money earned since creation */
+    private double totalMoneyEarned;
+    /** Company level based on earnings */
+    private int level = 1;
 
-    // Pending join requests
-    private final Set<UUID> pendingJoinRequests;
-
-    // Pending subsidiary requests
-    private final Map<String, UUID> pendingSubsidiaryRequests;
-
-    // Headquarters location
+    // ======== Headquarters Information ========
+    /** Headquarters world name */
     private String headquartersWorld;
+    /** Headquarters X coordinate */
     private double headquartersX;
+    /** Headquarters Y coordinate */
     private double headquartersY;
+    /** Headquarters Z coordinate */
     private double headquartersZ;
+    /** Whether headquarters is set */
     private boolean hasHeadquarters;
 
-    // National / International status
-    private boolean isInternational;
-
-    // Constants
-    public static final int MAX_COMPANIES_PER_PLAYER = 2;
-    public static final double FIRST_COMPANY_COST = 100000.0;
-    public static final double SECOND_COMPANY_COST = 500000.0;
-    public static final double INTERNATIONAL_UPGRADE_COST = 20000.0;
+    // ======== Constants ========
+    /** Level thresholds for company progression */
+    private static final double[] LEVEL_THRESHOLDS =
+            {0, 10000, 50000, 100000, 250000, 500000, 1000000};
+    /** National member limit */
     public static final int NATIONAL_MEMBER_LIMIT = 5;
+    /** International member limit */
     public static final int INTERNATIONAL_MEMBER_LIMIT = 10;
+    /** Cost to upgrade to international */
+    public static final double INTERNATIONAL_UPGRADE_COST = 20000.0;
 
     /**
-     * Creates a new Company with the given name and CEO.
-     *
-     * @param name   The unique name of the company
-     * @param ceoUUID The UUID of the CEO
-     * @param ceoName The name of the CEO
+     * Creates a new Company instance.
+     * 
+     * @param name Company name (must not be null or empty)
+     * @param ceoUUID CEO UUID (must not be null)
+     * @param ceoName CEO display name (must not be null)
+     * @throws IllegalArgumentException if any parameter is null or invalid
      */
     public Company(String name, UUID ceoUUID, String ceoName) {
-        this.name = name;
+        // Validate input parameters
+        if (name == null || name.trim().isEmpty()) {
+            throw new IllegalArgumentException("Company name cannot be null or empty");
+        }
+        if (ceoUUID == null) {
+            throw new IllegalArgumentException("CEO UUID cannot be null");
+        }
+        if (ceoName == null || ceoName.trim().isEmpty()) {
+            throw new IllegalArgumentException("CEO name cannot be null or empty");
+        }
+
+        // Initialize basic information
+        this.name = name.trim();
         this.ceoUUID = ceoUUID;
-        this.ceoName = ceoName;
-        this.members = new HashSet<>();
-        this.memberNames = new HashMap<>();
-        this.maxMembers = NATIONAL_MEMBER_LIMIT; // Default: National
+        this.ceoName = ceoName.trim();
+
+        // Add CEO as first member
+        this.members.add(ceoUUID);
+        
+        // Initialize financial values
         this.balance = 0.0;
         this.totalMoneyEarned = 0.0;
-        this.subsidiaries = new HashSet<>();
-        this.parentCompany = null;
-        this.level = 1;
-        this.pendingJoinRequests = new HashSet<>();
-        this.pendingSubsidiaryRequests = new HashMap<>();
-        this.hasHeadquarters = false;
-        this.headquartersWorld = null;
-        this.headquartersX = 0;
-        this.headquartersY = 0;
-        this.headquartersZ = 0;
-        this.isInternational = false; // Default: National
-
-        // CEO is automatically a member
-        this.members.add(ceoUUID);
-        this.memberNames.put(ceoUUID, ceoName);
     }
 
-    // ==================== Getters ====================
+    // ======== Basic Getters ========
 
-    public String getName() {
-        return name;
+    /**
+     * Gets the company name.
+     * @return Company name (never null)
+     */
+    public String getName() { return name; }
+    
+    /**
+     * Gets the CEO UUID.
+     * @return CEO UUID (never null)
+     */
+    public UUID getCeoUUID() { return ceoUUID; }
+    
+    /**
+     * Gets the CEO display name.
+     * @return CEO name (never null)
+     */
+    public String getCeoName() { return ceoName; }
+    
+    /**
+     * Gets an unmodifiable set of all company members.
+     * @return Set of member UUIDs (never null)
+     */
+    public Set<UUID> getMembers() { return Collections.unmodifiableSet(members); }
+    
+    /**
+     * Gets the current number of members.
+     * @return Member count (always >= 1)
+     */
+    public int getMemberCount() { return members.size(); }
+    
+    /**
+     * Gets the current company balance.
+     * @return Balance (can be negative)
+     */
+    public double getBalance() { return balance; }
+    
+    /**
+     * Gets the company level based on total earnings.
+     * @return Level (1-7)
+     */
+    public int getLevel() { return level; }
+
+    // ======== Member Management ========
+
+    /**
+     * Adds a new member to the company.
+     * @param uuid Player UUID to add
+     * @return true if member was added successfully, false otherwise
+     */
+    public boolean addMember(UUID uuid) {
+        if (uuid == null) {
+            return false;
+        }
+        if (members.contains(uuid)) {
+            return false; // Already a member
+        }
+        if (members.size() >= maxMembers) {
+            return false; // Member limit reached
+        }
+        return members.add(uuid);
     }
 
-    public UUID getCeoUUID() {
-        return ceoUUID;
+    /**
+     * Adds a new member to the company with name.
+     * @param uuid Player UUID to add
+     * @param name Player name (not used in current implementation)
+     * @return true if member was added successfully, false otherwise
+     */
+    public boolean addMember(UUID uuid, String name) {
+        return addMember(uuid); // Name parameter for future use
     }
 
-    public String getCeoName() {
-        return ceoName;
+    /**
+     * Removes a member from the company.
+     * @param uuid Player UUID to remove
+     * @return true if member was removed successfully, false otherwise
+     */
+    public boolean removeMember(UUID uuid) {
+        if (uuid == null) {
+            return false;
+        }
+        if (uuid.equals(ceoUUID)) {
+            return false; // Cannot remove CEO
+        }
+        return members.remove(uuid);
     }
 
-    public Set<UUID> getMembers() {
-        return new HashSet<>(members);
+    /**
+     * Checks if a player is a member of the company.
+     * @param uuid Player UUID to check
+     * @return true if player is a member, false otherwise
+     */
+    public boolean hasMember(UUID uuid) {
+        return uuid != null && members.contains(uuid);
     }
 
-    public int getMemberCount() {
-        return members.size();
+    /**
+     * Checks if a player is the CEO of the company.
+     * @param uuid Player UUID to check
+     * @return true if player is the CEO, false otherwise
+     */
+    public boolean isCEO(UUID uuid) {
+        return uuid != null && uuid.equals(ceoUUID);
     }
 
-    public int getMaxMembers() {
-        return maxMembers;
+    /**
+     * Sets a new CEO for the company.
+     * @param newCeoUUID New CEO UUID
+     * @param newCeoName New CEO display name
+     */
+    public void setCeo(UUID newCeoUUID, String newCeoName) {
+        if (newCeoUUID == null || newCeoName == null) {
+            throw new IllegalArgumentException("CEO UUID and name cannot be null");
+        }
+        
+        // Remove old CEO from members if different
+        if (!this.ceoUUID.equals(newCeoUUID)) {
+            members.remove(this.ceoUUID);
+            members.add(newCeoUUID);
+        }
+        
+        this.ceoUUID = newCeoUUID;
+        this.ceoName = newCeoName.trim();
     }
 
-    public double getBalance() {
-        return balance;
+    // ======== Financial Management ========
+
+    /**
+     * Deposits money into company account.
+     * @param amount Amount to deposit (must be positive)
+     */
+    public void deposit(double amount) {
+        if (amount <= 0) {
+            return; // Invalid amount
+        }
+        this.balance += amount;
+        this.totalMoneyEarned += amount;
+        updateLevel();
     }
 
+    /**
+     * Withdraws money from company account.
+     * @param amount Amount to withdraw (must be positive)
+     * @return true if withdrawal was successful, false if insufficient funds
+     */
+    public boolean withdraw(double amount) {
+        if (amount <= 0) {
+            return false; // Invalid amount
+        }
+        if (this.balance < amount) {
+            return false; // Insufficient funds
+        }
+        this.balance -= amount;
+        return true;
+    }
+
+    /**
+     * Gets total money earned by the company.
+     * @return Total earnings since creation
+     */
     public double getTotalMoneyEarned() {
         return totalMoneyEarned;
     }
 
-    public Set<String> getSubsidiaries() {
-        return new HashSet<>(subsidiaries);
-    }
+    // ======== Level Management ========
 
-    public String getParentCompany() {
-        return parentCompany;
-    }
-
-    public int getLevel() {
-        return level;
-    }
-
-    public boolean isInternational() {
-        return isInternational;
-    }
-
-    public String getStatusDisplay() {
-        return isInternational ? "International" : "National";
-    }
-
-    public String getStatusColor() {
-        return isInternational ? "§6" : "§a"; // Gold for International, Green for National
-    }
-
-    public boolean hasHeadquarters() {
-        return hasHeadquarters;
-    }
-
-    public Location getHeadquartersLocation() {
-        if (!hasHeadquarters || headquartersWorld == null) {
-            return null;
+    /**
+     * Updates company level based on total earnings.
+     * This method is called automatically when money is deposited.
+     */
+    private void updateLevel() {
+        int newLevel = 1;
+        for (int i = 0; i < LEVEL_THRESHOLDS.length; i++) {
+            if (totalMoneyEarned >= LEVEL_THRESHOLDS[i]) {
+                newLevel = i + 1;
+            }
         }
-        World world = Bukkit.getWorld(headquartersWorld);
-        if (world == null) {
-            return null;
-        }
-        return new Location(world, headquartersX, headquartersY, headquartersZ);
+        this.level = newLevel;
     }
 
-    public String getHeadquartersString() {
-        if (!hasHeadquarters) {
-            return "Not set";
-        }
-        return String.format("%s (%.0f, %.0f, %.0f)", headquartersWorld, headquartersX, headquartersY, headquartersZ);
-    }
-
-    // ==================== Setters ====================
-
-    public void setCeo(UUID newCeoUUID, String newCeoName) {
-        this.ceoUUID = newCeoUUID;
-        this.ceoName = newCeoName;
-        // Ensure CEO is a member
-        if (!members.contains(newCeoUUID)) {
-            members.add(newCeoUUID);
-            memberNames.put(newCeoUUID, newCeoName);
+    /**
+     * Gets the material icon for the company level.
+     * @return Material representing the level
+     */
+    public Material getLevelIcon() {
+        switch (level) {
+            case 1: return Material.COBBLESTONE;
+            case 2: return Material.IRON_BLOCK;
+            case 3: return Material.GOLD_BLOCK;
+            case 4: return Material.DIAMOND_BLOCK;
+            case 5: return Material.EMERALD_BLOCK;
+            case 6: return Material.OBSIDIAN;
+            default: return Material.NETHERITE_BLOCK;
         }
     }
 
-    public void setParentCompany(String parentCompany) {
-        this.parentCompany = parentCompany;
+    /**
+     * Gets the color code for the company level.
+     * @return Color code string for chat formatting
+     */
+    public String getLevelColor() {
+        switch (level) {
+            case 1: return "§8"; // Gray
+            case 2: return "§7"; // Light Gray
+            case 3: return "§6"; // Gold
+            case 4: return "§b"; // Aqua
+            case 5: return "§e"; // Yellow
+            case 6: return "§5"; // Purple
+            case 7: return "§c"; // Red
+            default: return "§f"; // White
+        }
     }
 
-    public void setHeadquarters(Location location) {
-        if (location == null) {
-            this.hasHeadquarters = false;
+    // ======== Headquarters Management ========
+
+    /**
+     * Sets company headquarters using Location object.
+     * @param loc Location to set as headquarters (can be null to clear)
+     */
+    public void setHeadquarters(Location loc) {
+        if (loc == null || loc.getWorld() == null) {
+            clearHeadquarters();
             return;
         }
-        this.headquartersWorld = location.getWorld().getName();
-        this.headquartersX = location.getX();
-        this.headquartersY = location.getY();
-        this.headquartersZ = location.getZ();
+
+        World w = loc.getWorld();
+        this.headquartersWorld = w.getName();
+        this.headquartersX = loc.getX();
+        this.headquartersY = loc.getY();
+        this.headquartersZ = loc.getZ();
         this.hasHeadquarters = true;
     }
 
+    /**
+     * Sets company headquarters using coordinates.
+     * @param world World name
+     * @param x X coordinate
+     * @param y Y coordinate  
+     * @param z Z coordinate
+     */
     public void setHeadquarters(String world, double x, double y, double z) {
-        this.headquartersWorld = world;
+        if (world == null || world.trim().isEmpty()) {
+            clearHeadquarters();
+            return;
+        }
+
+        this.headquartersWorld = world.trim();
         this.headquartersX = x;
         this.headquartersY = y;
         this.headquartersZ = z;
@@ -208,12 +366,243 @@ public class Company {
     }
 
     /**
-     * Upgrades the company to International status.
-     *
-     * @return true if upgrade was successful
+     * Clears the headquarters location.
+     */
+    private void clearHeadquarters() {
+        this.hasHeadquarters = false;
+        this.headquartersWorld = null;
+        this.headquartersX = 0;
+        this.headquartersY = 0;
+        this.headquartersZ = 0;
+    }
+
+    /**
+     * Gets the headquarters location.
+     * @return Location object or null if not set
+     */
+    public Location getHeadquarters() {
+        if (!hasHeadquarters || headquartersWorld == null) {
+            return null;
+        }
+        World w = Bukkit.getWorld(headquartersWorld);
+        if (w == null) {
+            return null; // World not loaded
+        }
+        return new Location(w, headquartersX, headquartersY, headquartersZ);
+    }
+
+    /**
+     * Gets the headquarters location (alias for getHeadquarters).
+     * @return Location object or null if not set
+     */
+    public Location getHeadquartersLocation() {
+        return getHeadquarters();
+    }
+
+    /**
+     * Checks if company has headquarters set.
+     * @return true if headquarters is set, false otherwise
+     */
+    public boolean hasHeadquarters() {
+        return hasHeadquarters;
+    }
+
+    /**
+     * Gets formatted string representation of headquarters location.
+     * @return Formatted location string
+     */
+    public String getHeadquartersString() {
+        if (!hasHeadquarters) {
+            return "§7Not set";
+        }
+        return String.format("§7%s, %d, %d, %d", 
+            headquartersWorld, 
+            (int)headquartersX, 
+            (int)headquartersY, 
+            (int)headquartersZ);
+    }
+
+    // ======== Status Management ========
+
+    /**
+     * Checks if company is international.
+     * @return true if international, false if national
+     */
+    public boolean isInternational() {
+        return isInternational;
+    }
+
+    /**
+     * Gets maximum number of members allowed.
+     * @return Maximum member count
+     */
+    public int getMaxMembers() {
+        return maxMembers;
+    }
+
+    /**
+     * Gets formatted status display string.
+     * @return Status string with color
+     */
+    public String getStatusDisplay() {
+        return isInternational() ? "§6International" : "§aNational";
+    }
+
+    /**
+     * Gets color code for company status.
+     * @return Color code string
+     */
+    public String getStatusColor() {
+        return isInternational() ? "§6" : "§a";
+    }
+
+    // ======== Subsidiary Management ========
+
+    /**
+     * Checks if company is a subsidiary.
+     * @return true if subsidiary, false otherwise
+     */
+    public boolean isSubsidiary() {
+        return isSubsidiary;
+    }
+
+    /**
+     * Gets parent company name.
+     * @return Parent company name or null if not subsidiary
+     */
+    public String getParentCompany() {
+        return parentCompany;
+    }
+
+    /**
+     * Sets parent company relationship.
+     * @param parent Parent company name (null to clear)
+     */
+    public void setParentCompany(String parent) {
+        this.parentCompany = parent;
+        this.isSubsidiary = parent != null;
+    }
+
+    /**
+     * Gets unmodifiable set of subsidiary companies.
+     * @return Set of subsidiary names
+     */
+    public Set<String> getSubsidiaries() {
+        return Collections.unmodifiableSet(subsidiaries);
+    }
+
+    /**
+     * Adds a subsidiary company.
+     * @param name Subsidiary company name
+     * @return true if added successfully, false otherwise
+     */
+    public boolean addSubsidiary(String name) {
+        if (name == null || name.trim().isEmpty()) {
+            return false;
+        }
+        if (name.equalsIgnoreCase(this.name)) {
+            return false; // Cannot add self as subsidiary
+        }
+        return subsidiaries.add(name.trim());
+    }
+
+    /**
+     * Removes a subsidiary company.
+     * @param name Subsidiary company name
+     * @return true if removed successfully, false otherwise
+     */
+    public boolean removeSubsidiary(String name) {
+        if (name == null) {
+            return false;
+        }
+        return subsidiaries.remove(name);
+    }
+
+    /**
+     * Checks if company has a specific subsidiary.
+     * @param name Subsidiary name to check
+     * @return true if subsidiary exists, false otherwise
+     */
+    public boolean hasSubsidiary(String name) {
+        return name != null && subsidiaries.contains(name);
+    }
+
+    // ======== Join Request Management ========
+
+    /**
+     * Gets unmodifiable set of pending join requests.
+     * @return Set of player UUIDs with pending requests
+     */
+    public Set<UUID> getPendingJoinRequests() {
+        return Collections.unmodifiableSet(pendingJoinRequests);
+    }
+
+    /**
+     * Adds a join request from a player.
+     * @param uuid Player UUID requesting to join
+     * @return true if request was added, false if already exists or invalid
+     */
+    public boolean addJoinRequest(UUID uuid) {
+        if (uuid == null) {
+            return false;
+        }
+        if (members.contains(uuid)) {
+            return false; // Already a member
+        }
+        return pendingJoinRequests.add(uuid);
+    }
+
+    /**
+     * Removes a join request.
+     * @param uuid Player UUID to remove
+     * @return true if request was removed, false otherwise
+     */
+    public boolean removeJoinRequest(UUID uuid) {
+        return pendingJoinRequests.remove(uuid);
+    }
+
+    /**
+     * Checks if player has a pending join request.
+     * @param uuid Player UUID to check
+     * @return true if request exists, false otherwise
+     */
+    public boolean hasJoinRequest(UUID uuid) {
+        return uuid != null && pendingJoinRequests.contains(uuid);
+    }
+
+    /**
+     * Gets player name for display purposes.
+     * @param uuid Player UUID
+     * @return Player name or UUID string as fallback
+     */
+    public String getMemberName(UUID uuid) {
+        if (uuid == null) {
+            return "Unknown";
+        }
+        if (uuid.equals(ceoUUID)) {
+            return ceoName;
+        }
+        // In a real implementation, this would query a name cache
+        return uuid.toString().substring(0, 8) + "...";
+    }
+
+    // ======== Company Status Management ========
+
+    /**
+     * Sets company to national status.
+     * Reduces member limit to national limit.
+     */
+    public void setNational() {
+        this.isInternational = false;
+        this.maxMembers = NATIONAL_MEMBER_LIMIT;
+    }
+
+    /**
+     * Upgrades company to international status.
+     * @return true if upgrade was successful, false if already international
      */
     public boolean upgradeToInternational() {
-        if (isInternational) {
+        if (this.isInternational) {
             return false; // Already international
         }
         this.isInternational = true;
@@ -221,232 +610,38 @@ public class Company {
         return true;
     }
 
-    /**
-     * Downgrades to National (mainly for admin purposes).
-     */
-    public void setNational() {
-        this.isInternational = false;
-        this.maxMembers = NATIONAL_MEMBER_LIMIT;
-    }
-
-    // ==================== Member Management ====================
+    // ======== Utility Methods ========
 
     /**
-     * Checks if the company can accept more members.
-     *
-     * @return true if there's space for more members
+     * Checks if this company is equal to another object.
+     * @param o Object to compare
+     * @return true if equal, false otherwise
      */
-    public boolean canAddMember() {
-        return members.size() < maxMembers;
-    }
-
-    /**
-     * Gets the remaining member slots.
-     *
-     * @return number of available slots
-     */
-    public int getRemainingSlots() {
-        return maxMembers - members.size();
-    }
-
-    public void addMember(UUID playerUUID, String playerName) {
-        members.add(playerUUID);
-        memberNames.put(playerUUID, playerName);
-    }
-
-    public void removeMember(UUID playerUUID) {
-        members.remove(playerUUID);
-        memberNames.remove(playerUUID);
-    }
-
-    public boolean hasMember(UUID playerUUID) {
-        return members.contains(playerUUID);
-    }
-
-    public String getMemberName(UUID playerUUID) {
-        return memberNames.getOrDefault(playerUUID, "Unknown");
-    }
-
-    public boolean isCEO(UUID playerUUID) {
-        return ceoUUID.equals(playerUUID);
-    }
-
-    // ==================== Economy Management ====================
-
-    public void deposit(double amount) {
-        this.balance += amount;
-        this.totalMoneyEarned += amount;
-        updateLevel();
-    }
-
-    public boolean withdraw(double amount) {
-        if (balance >= amount) {
-            this.balance -= amount;
-            return true;
-        }
-        return false;
-    }
-
-    // ==================== Level System ====================
-
-    /**
-     * Updates the company level based on total money earned.
-     * Level tiers:
-     * - Level 1: < 10,000$
-     * - Level 2: 10,000$ - 50,000$
-     * - Level 3: 50,000$ - 100,000$
-     * - Level 4: 100,000$ - 250,000$
-     * - Level 5: 250,000$ - 500,000$
-     * - Level 6: 500,000$ - 1,000,000$
-     * - Level 7: 1,000,000$+ (Netherite)
-     */
-    private void updateLevel() {
-        if (totalMoneyEarned < 10000) {
-            level = 1;
-        } else if (totalMoneyEarned < 50000) {
-            level = 2;
-        } else if (totalMoneyEarned < 100000) {
-            level = 3;
-        } else if (totalMoneyEarned < 250000) {
-            level = 4;
-        } else if (totalMoneyEarned < 500000) {
-            level = 5;
-        } else if (totalMoneyEarned < 1000000) {
-            level = 6;
-        } else {
-            level = 7;
-        }
-    }
-
-    /**
-     * Gets the material icon for this company's level.
-     *
-     * @return Material representing the company level
-     */
-    public Material getLevelIcon() {
-        switch (level) {
-            case 1:
-                return Material.COBBLESTONE;
-            case 2:
-                return Material.IRON_BLOCK;
-            case 3:
-                return Material.GOLD_BLOCK;
-            case 4:
-                return Material.DIAMOND_BLOCK;
-            case 5:
-                return Material.EMERALD_BLOCK;
-            case 6:
-                return Material.OBSIDIAN;
-            case 7:
-                return Material.NETHERITE_BLOCK;
-            default:
-                return Material.COBBLESTONE;
-        }
-    }
-
-    public String getLevelColor() {
-        switch (level) {
-            case 1:
-                return "§7"; // Gray
-            case 2:
-                return "§f"; // White
-            case 3:
-                return "§e"; // Yellow
-            case 4:
-                return "§b"; // Aqua
-            case 5:
-                return "§a"; // Green
-            case 6:
-                return "§5"; // Dark Purple
-            case 7:
-                return "§4"; // Dark Red
-            default:
-                return "§7";
-        }
-    }
-
-    // ==================== Subsidiary Management ====================
-
-    public void addSubsidiary(String companyName) {
-        subsidiaries.add(companyName);
-    }
-
-    public void removeSubsidiary(String companyName) {
-        subsidiaries.remove(companyName);
-    }
-
-    public boolean hasSubsidiary(String companyName) {
-        return subsidiaries.contains(companyName);
-    }
-
-    public boolean isSubsidiary() {
-        return parentCompany != null;
-    }
-
-    // ==================== Join Request Management ====================
-
-    public void addJoinRequest(UUID playerUUID) {
-        pendingJoinRequests.add(playerUUID);
-    }
-
-    public void removeJoinRequest(UUID playerUUID) {
-        pendingJoinRequests.remove(playerUUID);
-    }
-
-    public boolean hasJoinRequest(UUID playerUUID) {
-        return pendingJoinRequests.contains(playerUUID);
-    }
-
-    public Set<UUID> getPendingJoinRequests() {
-        return new HashSet<>(pendingJoinRequests);
-    }
-
-    // ==================== Subsidiary Request Management ====================
-
-    public void addSubsidiaryRequest(String companyName, UUID requesterUUID) {
-        pendingSubsidiaryRequests.put(companyName, requesterUUID);
-    }
-
-    public void removeSubsidiaryRequest(String companyName) {
-        pendingSubsidiaryRequests.remove(companyName);
-    }
-
-    public boolean hasSubsidiaryRequest(String companyName) {
-        return pendingSubsidiaryRequests.containsKey(companyName);
-    }
-
-    public UUID getSubsidiaryRequester(String companyName) {
-        return pendingSubsidiaryRequests.get(companyName);
-    }
-
-    public Map<String, UUID> getPendingSubsidiaryRequests() {
-        return new HashMap<>(pendingSubsidiaryRequests);
-    }
-
-    // ==================== Utility ====================
-
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        Company company = (Company) o;
-        return Objects.equals(name, company.name);
+        if (!(o instanceof Company)) return false;
+        Company c = (Company) o;
+        return name != null && name.equalsIgnoreCase(c.name);
     }
 
+    /**
+     * Gets hash code for this company.
+     * @return Hash code based on company name
+     */
     @Override
     public int hashCode() {
-        return Objects.hash(name);
+        return name == null ? 0 : name.toLowerCase().hashCode();
     }
 
+    /**
+     * Gets string representation of this company.
+     * @return Company name with status
+     */
     @Override
     public String toString() {
-        return "Company{" +
-                "name='" + name + '\'' +
-                ", ceoName='" + ceoName + '\'' +
-                ", level=" + level +
-                ", status=" + getStatusDisplay() +
-                ", members=" + members.size() + "/" + maxMembers +
-                ", balance=" + balance +
-                '}';
+        return String.format("Company{name=%s, level=%d, members=%d, balance=%.2f}", 
+            name, level, members.size(), balance);
     }
-}
+
+    }

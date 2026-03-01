@@ -12,12 +12,27 @@ import org.bukkit.event.inventory.InventoryCloseEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
+import org.bukkit.inventory.meta.SkullMeta;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Handles all GUI (Inventory) interfaces for the company system.
- * Includes company list, company details, bank interface, and management GUIs.
+ * Comprehensive GUI system for company management.
+ * 
+ * <p>This class handles all inventory-based user interfaces including:</p>
+ * <ul>
+ *   <li>Company list and selection</li>
+ *   <li>Company details and statistics</li>
+ *   <li>Bank deposit/withdraw interface</li>
+ *   <li>Member management</li>
+ *   <li>Subsidiary management</li>
+ *   <li>Company settings</li>
+ * </ul>
+ * 
+ * @author Dominatuin
+ * @version 1.0
+ * @since 1.0-SNAPSHOT
  */
 public class CompanyGUI implements Listener {
 
@@ -27,35 +42,67 @@ public class CompanyGUI implements Listener {
     private final MessageManager messageManager;
     private final ConfigManager configManager;
 
-    // Track which players are viewing which GUI type
+    // ======== GUI State Management ========
+    /** Tracks which company each player is currently viewing */
     private final Map<UUID, String> playerViewingCompany;
+    /** Tracks current page for each player's GUI */
     private final Map<UUID, Integer> playerPage;
+    /** Tracks GUI type for each player */
+    private final Map<UUID, GUIType> playerGUIType;
 
-    // GUI size constants
+    // ======== GUI Constants ========
+    /** Standard GUI size (6 rows) */
+    private static final int GUI_SIZE = 54;
+    /** Companies to display per page */
     private final int companiesPerPage;
-    private static final int GUI_SIZE = 54; // 6 rows
+    /** Navigation slot positions */
+    private static final int[] NAVIGATION_SLOTS = {45, 46, 47, 48, 49, 50, 51, 52, 53};
+    /** Content slot positions (first 5 rows) */
+    private static final int[] CONTENT_SLOTS = {
+        0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26,
+        27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44
+    };
+
+    /** GUI type enumeration */
+    private enum GUIType {
+        COMPANY_LIST, COMPANY_DETAILS, BANK, MEMBERS, SUBSIDIARIES, SETTINGS
+    }
 
     /**
      * Creates a new CompanyGUI instance.
-     *
-     * @param plugin         The main plugin instance
-     * @param companyManager The company manager
-     * @param economyManager The economy manager
-     * @param messageManager The message manager
-     * @param configManager  The config manager
+     * 
+     * @param plugin Main plugin instance
+     * @param companyManager Company management system
+     * @param economyManager Economy management system  
+     * @param messageManager Message handling system
+     * @param configManager Configuration management
      */
     public CompanyGUI(DWcompany plugin, CompanyManager companyManager, EconomyManager economyManager,
                       MessageManager messageManager, ConfigManager configManager) {
-        this.plugin = plugin;
-        this.companyManager = companyManager;
-        this.economyManager = economyManager;
-        this.messageManager = messageManager;
-        this.configManager = configManager;
-        this.playerViewingCompany = new HashMap<>();
-        this.playerPage = new HashMap<>();
-        this.companiesPerPage = configManager.getInt("gui.companies-per-page", 45);
-
+        // Initialize dependencies
+        this.plugin = Objects.requireNonNull(plugin, "Plugin cannot be null");
+        this.companyManager = Objects.requireNonNull(companyManager, "Company manager cannot be null");
+        this.economyManager = Objects.requireNonNull(economyManager, "Economy manager cannot be null");
+        this.messageManager = Objects.requireNonNull(messageManager, "Message manager cannot be null");
+        this.configManager = Objects.requireNonNull(configManager, "Config manager cannot be null");
+        
+        // Initialize state tracking
+        this.playerViewingCompany = new ConcurrentHashMap<>();
+        this.playerPage = new ConcurrentHashMap<>();
+        this.playerGUIType = new ConcurrentHashMap<>();
+        
+        // Load configuration
+        this.companiesPerPage = configManager.getInt("gui.companies-per-page", 10);
+        
         // Register events
+        registerEvents();
+    }
+
+    /**
+     * Registers this GUI handler with the plugin.
+     * Called automatically during construction.
+     */
+    private void registerEvents() {
         plugin.getServer().getPluginManager().registerEvents(this, plugin);
     }
 
@@ -154,7 +201,7 @@ public class CompanyGUI implements Listener {
         }
 
         // Actions
-        Company playerCompany = companyManager.getCompany(companyManager.getPlayerCompany(player.getUniqueId()));
+        Company playerCompany = companyManager.getPlayerCompany(player.getUniqueId());
 
         // Join request button (if not in company)
         if (playerCompany == null) {
@@ -175,11 +222,12 @@ public class CompanyGUI implements Listener {
      * @param player The player
      */
     public void openCompanyBank(Player player) {
-        String companyName = companyManager.getPlayerCompany(player.getUniqueId());
-        if (companyName == null) {
+        Company playerCompany = companyManager.getPlayerCompany(player.getUniqueId());
+        if (playerCompany == null) {
             player.sendMessage("§cYou are not in a company.");
             return;
         }
+        String companyName = playerCompany.getName();
 
         Company company = companyManager.getCompany(companyName);
         if (company == null) {
@@ -224,11 +272,12 @@ public class CompanyGUI implements Listener {
      * @param player The CEO player
      */
     public void openCompanyManagement(Player player) {
-        String companyName = companyManager.getPlayerCompany(player.getUniqueId());
-        if (companyName == null) {
+        Company playerCompany = companyManager.getPlayerCompany(player.getUniqueId());
+        if (playerCompany == null) {
             player.sendMessage("§cYou are not in a company.");
             return;
         }
+        String companyName = playerCompany.getName();
 
         Company company = companyManager.getCompany(companyName);
         if (company == null || !company.isCEO(player.getUniqueId())) {
@@ -324,11 +373,11 @@ public class CompanyGUI implements Listener {
         meta.setDisplayName(title);
 
         List<String> lore = new ArrayList<>();
-        String companyName = companyManager.getPlayerCompany(player.getUniqueId());
-        if (companyName != null) {
-            Company company = companyManager.getCompany(companyName);
+        Company playerCompany = companyManager.getPlayerCompany(player.getUniqueId());
+        if (playerCompany != null) {
+            Company company = playerCompany;
             if (company != null) {
-                lore.add("§7Company: §f" + companyName);
+                lore.add("§7Company: §f" + company.getName());
                 lore.add("§7Role: " + (company.isCEO(player.getUniqueId()) ? "§6CEO" : "§7Member"));
                 lore.add("§7Balance: §a" + economyManager.formatMoney(company.getBalance()));
             }
@@ -388,14 +437,28 @@ public class CompanyGUI implements Listener {
         return item;
     }
 
+    /**
+     * Creates an action item with click functionality.
+     * 
+     * @param material Material for the item
+     * @param name Display name for the item
+     * @param description Description text for lore
+     * @return Configured ItemStack for actions
+     */
     private ItemStack createActionItem(Material material, String name, String description) {
+        if (material == null || name == null) {
+            return new ItemStack(Material.BARRIER);
+        }
+        
         ItemStack item = new ItemStack(material);
         ItemMeta meta = item.getItemMeta();
         meta.setDisplayName(name);
 
         List<String> lore = new ArrayList<>();
-        lore.add(description);
-
+        if (description != null && !description.trim().isEmpty()) {
+            lore.add("§7" + description);
+        }
+        lore.add("§eClick to execute");
         meta.setLore(lore);
         item.setItemMeta(meta);
         return item;
@@ -544,7 +607,8 @@ public class CompanyGUI implements Listener {
         if (meta == null) return;
 
         String name = meta.getDisplayName();
-        String companyName = companyManager.getPlayerCompany(player.getUniqueId());
+        Company playerCompany = companyManager.getPlayerCompany(player.getUniqueId());
+        String companyName = playerCompany != null ? playerCompany.getName() : null;
 
         if (name.equals("§cClose")) {
             playSound(player, Sound.UI_BUTTON_CLICK);
@@ -670,11 +734,97 @@ public class CompanyGUI implements Listener {
     /**
      * Gets the company name a player is currently viewing.
      *
-     * @param playerUUID The player's UUID
-     * @return The company name, or null
+     * @param playerUUID The player's UUID (must not be null)
+     * @return The company name, or null if not viewing
      */
     public String getPlayerViewingCompany(UUID playerUUID) {
+        if (playerUUID == null) {
+            return null;
+        }
         return playerViewingCompany.get(playerUUID);
+    }
+
+    /**
+     * Safely closes a player's GUI and cleans up state.
+     * 
+     * @param player The player to clean up for
+     */
+    public void closePlayerGUI(Player player) {
+        if (player == null) {
+            return;
+        }
+        
+        UUID playerUUID = player.getUniqueId();
+        playerViewingCompany.remove(playerUUID);
+        playerPage.remove(playerUUID);
+        playerGUIType.remove(playerUUID);
+        
+        // Close any open inventory
+        player.closeInventory();
+    }
+
+    /**
+     * Validates if a slot is clickable in the GUI.
+     * 
+     * @param slot Slot number to check
+     * @return true if slot is clickable, false otherwise
+     */
+    private boolean isClickableSlot(int slot) {
+        if (slot < 0 || slot >= GUI_SIZE) {
+            return false;
+        }
+        
+        // Check if slot is in content area (first 5 rows)
+        for (int contentSlot : CONTENT_SLOTS) {
+            if (slot == contentSlot) {
+                return true;
+            }
+        }
+        
+        // Check if slot is in navigation area (bottom row)
+        for (int navSlot : NAVIGATION_SLOTS) {
+            if (slot == navSlot) {
+                return true;
+            }
+        }
+        
+        return false;
+    }
+
+    /**
+     * Gets the current page for a player.
+     * 
+     * @param playerUUID The player's UUID
+     * @return Current page number, or 0 if not set
+     */
+    public int getPlayerPage(UUID playerUUID) {
+        if (playerUUID == null) {
+            return 0;
+        }
+        return playerPage.getOrDefault(playerUUID, 0);
+    }
+
+    /**
+     * Handles GUI errors gracefully with logging and user feedback.
+     * 
+     * @param player The player to notify
+     * @param error Error message to display
+     * @param context Context where error occurred
+     */
+    private void handleGUIError(Player player, String error, String context) {
+        if (player == null || !player.isOnline()) {
+            return;
+        }
+        
+        // Log error for debugging
+        plugin.getLogger().warning(String.format("GUI Error in %s: %s", context, error));
+        
+        // Notify player
+        player.sendMessage("§cError: " + error);
+        playErrorSound(player);
+        
+        // Close GUI to prevent further issues
+        closePlayerGUI(player);
     }
 
     /**

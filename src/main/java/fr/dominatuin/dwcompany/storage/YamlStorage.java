@@ -74,7 +74,7 @@ public class YamlStorage implements StorageProvider {
     }
 
     @Override
-    public List<Company> loadCompanies() {
+    public Collection<Company> loadAllCompanies() {
         List<Company> companies = new ArrayList<>();
 
         if (!connected || companiesConfig == null) {
@@ -97,11 +97,11 @@ public class YamlStorage implements StorageProvider {
                     companies.add(company);
                 }
             } catch (Exception e) {
-                plugin.getLogger().log(Level.WARNING, "Failed to load company: " + companyName, e);
+                plugin.getLogger().log(Level.WARNING, String.format("Failed to load company: %s", companyName), e);
             }
         }
 
-        plugin.getLogger().info("Loaded " + companies.size() + " companies from YAML");
+        plugin.getLogger().info(String.format("Loaded %d companies from YAML", companies.size()));
         return companies;
     }
 
@@ -113,7 +113,7 @@ public class YamlStorage implements StorageProvider {
         String ceoName = section.getString("ceo.name");
 
         if (ceoUUIDStr == null || ceoName == null) {
-            plugin.getLogger().warning("Missing CEO data for company: " + name);
+            plugin.getLogger().warning(String.format("Missing CEO data for company: %s", name));
             return null;
         }
 
@@ -121,7 +121,7 @@ public class YamlStorage implements StorageProvider {
         try {
             ceoUUID = UUID.fromString(ceoUUIDStr);
         } catch (IllegalArgumentException e) {
-            plugin.getLogger().warning("Invalid CEO UUID for company: " + name);
+            plugin.getLogger().warning(String.format("Invalid CEO UUID for company: %s", name));
             return null;
         }
 
@@ -145,7 +145,7 @@ public class YamlStorage implements StorageProvider {
                     company.addMember(memberUUID, memberName);
                 }
             } catch (IllegalArgumentException e) {
-                plugin.getLogger().warning("Invalid member UUID in company " + name + ": " + memberUUIDs.get(i));
+                plugin.getLogger().warning(String.format("Invalid member UUID in company %s: %s", name, memberUUIDs.get(i)));
             }
         }
 
@@ -179,7 +179,6 @@ public class YamlStorage implements StorageProvider {
         return company;
     }
 
-    @Override
     public boolean saveCompany(Company company) {
         if (!connected || companiesConfig == null) {
             return false;
@@ -237,7 +236,7 @@ public class YamlStorage implements StorageProvider {
     }
 
     @Override
-    public boolean saveCompanies(Collection<Company> companies) {
+    public boolean saveAllCompanies(Collection<Company> companies) {
         if (!connected || companiesConfig == null) {
             return false;
         }
@@ -324,13 +323,13 @@ public class YamlStorage implements StorageProvider {
 
                 if (ceoUUID == null || ceoName == null) {
                     invalidCount++;
-                    plugin.getLogger().warning("Data validation: Company '" + companyName + "' has missing CEO data");
+                    plugin.getLogger().warning(String.format("Data validation: Company '%s' has missing CEO data", companyName));
                 } else {
                     validCount++;
                 }
             }
 
-            plugin.getLogger().info("Data validation: " + validCount + " valid companies, " + invalidCount + " invalid");
+            plugin.getLogger().info(String.format("Data validation: %d valid companies, %d invalid", validCount, invalidCount));
             return invalidCount == 0;
 
         } catch (Exception e) {

@@ -1,7 +1,7 @@
 package fr.dominatuin.dwcompany;
 
-import fr.dominatuin.dwcompany.storage.DataManager;
 import org.bukkit.Bukkit;
+import org.bukkit.Location;
 import org.bukkit.command.Command;
 import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
@@ -192,13 +192,13 @@ public class CompanyCommandExecutor implements CommandExecutor, TabCompleter {
     private boolean handleLeave(Player player, String[] args) {
         if (!checkPermission(player, "dwcompany.leave")) return true;
 
-        String companyName = companyManager.getPlayerCompany(player.getUniqueId());
-        if (companyName == null) {
+        Company playerCompany = companyManager.getPlayerCompany(player.getUniqueId());
+        if (playerCompany == null) {
             player.sendMessage("§cYou are not in a company.");
             return true;
         }
 
-        Company company = companyManager.getCompany(companyName);
+        Company company = playerCompany;
         if (company == null) {
             player.sendMessage("§cCompany not found.");
             return true;
@@ -224,8 +224,8 @@ public class CompanyCommandExecutor implements CommandExecutor, TabCompleter {
 
             // Confirm delete if only member
             if (company.getMemberCount() == 1) {
-                companyManager.deleteCompany(companyName);
-                player.sendMessage("§cYou left and the company §l" + companyName + " §chas been deleted.");
+                companyManager.deleteCompany(company.getName());
+                player.sendMessage("§cYou left and the company §l" + company.getName() + " §chas been deleted.");
                 return true;
             } else {
                 player.sendMessage("§cYou cannot leave as CEO with other members. Transfer ownership first!");
@@ -235,7 +235,7 @@ public class CompanyCommandExecutor implements CommandExecutor, TabCompleter {
 
         // Regular member leave
         if (companyManager.removeMemberFromCompany(player.getUniqueId())) {
-            player.sendMessage("§aYou have left the company §l" + companyName + "§a.");
+            player.sendMessage("§aYou have left the company §l" + company.getName() + "§a.");
 
             // Notify CEO
             Player ceo = Bukkit.getPlayer(company.getCeoUUID());
@@ -257,14 +257,14 @@ public class CompanyCommandExecutor implements CommandExecutor, TabCompleter {
         }
 
         String action = args[1].toLowerCase();
-        String companyName = companyManager.getPlayerCompany(player.getUniqueId());
+        Company playerCompany = companyManager.getPlayerCompany(player.getUniqueId());
 
-        if (companyName == null) {
+        if (playerCompany == null) {
             player.sendMessage("§cYou are not in a company.");
             return true;
         }
 
-        Company company = companyManager.getCompany(companyName);
+        Company company = playerCompany;
         if (company == null) {
             player.sendMessage("§cCompany not found.");
             return true;
@@ -287,12 +287,12 @@ public class CompanyCommandExecutor implements CommandExecutor, TabCompleter {
 
                 if (!checkPermission(player, "dwcompany.bank.deposit")) return true;
 
-                EconomyManager.TransactionResult result = economyManager.depositToCompany(player, companyName, depositAmount);
+                EconomyManager.TransactionResult result = economyManager.depositToCompany(player, company.getName(), depositAmount);
                 player.sendMessage(result.getMessage());
 
                 if (result.isSuccess()) {
                     player.sendMessage("§aDeposited §l" + economyManager.formatMoney(depositAmount) + " §ainto the company bank.");
-                    player.sendMessage("§7New balance: §a" + economyManager.formatMoney(companyManager.getCompany(companyName).getBalance()));
+                    player.sendMessage("§7New balance: §a" + economyManager.formatMoney(company.getBalance()));
                 }
                 break;
 
@@ -316,18 +316,18 @@ public class CompanyCommandExecutor implements CommandExecutor, TabCompleter {
                     return true;
                 }
 
-                EconomyManager.TransactionResult withdrawResult = economyManager.withdrawFromCompany(player, companyName, withdrawAmount);
+                EconomyManager.TransactionResult withdrawResult = economyManager.withdrawFromCompany(player, company.getName(), withdrawAmount);
                 player.sendMessage(withdrawResult.getMessage());
 
                 if (withdrawResult.isSuccess()) {
                     player.sendMessage("§aWithdrawn §l" + economyManager.formatMoney(withdrawAmount) + " §afrom the company bank.");
-                    player.sendMessage("§7New balance: §a" + economyManager.formatMoney(companyManager.getCompany(companyName).getBalance()));
+                    player.sendMessage("§7New balance: §a" + economyManager.formatMoney(company.getBalance()));
                 }
                 break;
 
             case "balance":
                 player.sendMessage("§6Company Bank Balance");
-                player.sendMessage("§7Company: §f" + companyName);
+                player.sendMessage("§7Company: §f" + company.getName());
                 player.sendMessage("§7Balance: §a" + economyManager.formatMoney(company.getBalance()));
                 player.sendMessage("§7Total Earned: §a" + economyManager.formatMoney(company.getTotalMoneyEarned()));
                 break;
@@ -346,14 +346,14 @@ public class CompanyCommandExecutor implements CommandExecutor, TabCompleter {
         }
 
         String subAction = args[1].toLowerCase();
-        String companyName = companyManager.getPlayerCompany(player.getUniqueId());
+        Company playerCompany = companyManager.getPlayerCompany(player.getUniqueId());
 
-        if (companyName == null) {
+        if (playerCompany == null) {
             player.sendMessage("§cYou are not in a company.");
             return true;
         }
 
-        Company company = companyManager.getCompany(companyName);
+        Company company = playerCompany;
         if (company == null) {
             player.sendMessage("§cCompany not found.");
             return true;
@@ -382,10 +382,10 @@ public class CompanyCommandExecutor implements CommandExecutor, TabCompleter {
                 // Create subsidiary as a new company
                 if (companyManager.createCompany(newFilialeName, player.getUniqueId(), player.getName())) {
                     // Set parent relationship
-                    companyManager.addSubsidiary(companyName, newFilialeName);
+                    companyManager.addSubsidiary(playerCompany.getName(), newFilialeName);
 
                     player.sendMessage("§aSubsidiary §l" + newFilialeName + " §ahas been created!");
-                    player.sendMessage("§7Parent company: §f" + companyName);
+                    player.sendMessage("§7Parent company: §f" + playerCompany.getName());
                 } else {
                     player.sendMessage("§cA company with this name already exists.");
                 }
@@ -410,19 +410,19 @@ public class CompanyCommandExecutor implements CommandExecutor, TabCompleter {
                     return true;
                 }
 
-                if (targetCompany.getName().equalsIgnoreCase(companyName)) {
+                if (targetCompany.getName().equalsIgnoreCase(playerCompany.getName())) {
                     player.sendMessage("§cA company cannot be its own subsidiary.");
                     return true;
                 }
 
                 // Add subsidiary relationship
-                if (companyManager.addSubsidiary(companyName, targetCompanyName)) {
-                    player.sendMessage("§a§l" + targetCompanyName + " §ais now a subsidiary of §l" + companyName + "§a!");
+                if (companyManager.addSubsidiary(playerCompany.getName(), targetCompanyName)) {
+                    player.sendMessage("§a§l" + targetCompanyName + " §ais now a subsidiary of §l" + playerCompany.getName() + "§a!");
 
                     // Notify target CEO
                     Player targetCEO = Bukkit.getPlayer(targetCompany.getCeoUUID());
                     if (targetCEO != null && targetCEO.isOnline()) {
-                        targetCEO.sendMessage("§eYour company is now a subsidiary of §l" + companyName + "§e.");
+                        targetCEO.sendMessage("§eYour company is now a subsidiary of §l" + playerCompany.getName() + "§e.");
                     }
                 } else {
                     player.sendMessage("§cFailed to add subsidiary.");
@@ -441,7 +441,7 @@ public class CompanyCommandExecutor implements CommandExecutor, TabCompleter {
                     return true;
                 }
 
-                if (companyManager.removeSubsidiary(companyName, removeName)) {
+                if (companyManager.removeSubsidiary(playerCompany.getName(), removeName)) {
                     player.sendMessage("§aRemoved §l" + removeName + " §aas your subsidiary.");
                 } else {
                     player.sendMessage("§cFailed to remove subsidiary.");
@@ -449,7 +449,7 @@ public class CompanyCommandExecutor implements CommandExecutor, TabCompleter {
                 break;
 
             case "list":
-                player.sendMessage("§6Subsidiaries of §l" + companyName);
+                player.sendMessage("§6Subsidiaries of §l" + playerCompany.getName());
                 if (company.getSubsidiaries().isEmpty()) {
                     player.sendMessage("§7No subsidiaries.");
                 } else {
@@ -467,13 +467,13 @@ public class CompanyCommandExecutor implements CommandExecutor, TabCompleter {
     }
 
     private boolean handleBatiment(Player player) {
-        String companyName = companyManager.getPlayerCompany(player.getUniqueId());
-        if (companyName == null) {
+        Company playerCompany = companyManager.getPlayerCompany(player.getUniqueId());
+        if (playerCompany == null) {
             player.sendMessage(MSG_NOT_IN_COMPANY);
             return true;
         }
 
-        Company company = companyManager.getCompany(companyName);
+        Company company = playerCompany;
         if (company == null) {
             player.sendMessage(MSG_COMPANY_NOT_FOUND);
             return true;
@@ -484,13 +484,13 @@ public class CompanyCommandExecutor implements CommandExecutor, TabCompleter {
             return true;
         }
 
-        org.bukkit.Location loc = player.getLocation();
+        Location loc = player.getLocation();
 
-        if (companyManager.setCompanyHeadquarters(companyName, loc)) {
+        if (companyManager.setCompanyHeadquarters(playerCompany.getName(), loc)) {
             if (dynmapManager != null && dynmapManager.isDynmapEnabled()) {
                 dynmapManager.addOrUpdateCompanyMarker(company);
             }
-            player.sendMessage("§aHeadquarters set for §l" + companyName + "§a!");
+            player.sendMessage("§aHeadquarters set for §l" + playerCompany.getName() + "§a!");
             player.sendMessage("§7Location: §f" + company.getHeadquartersString());
         } else {
             player.sendMessage("§cFailed to set headquarters.");
@@ -499,13 +499,13 @@ public class CompanyCommandExecutor implements CommandExecutor, TabCompleter {
     }
 
     private boolean handleStatus(Player player, String[] args) {
-        String companyName = companyManager.getPlayerCompany(player.getUniqueId());
-        if (companyName == null) {
+        Company playerCompany = companyManager.getPlayerCompany(player.getUniqueId());
+        if (playerCompany == null) {
             player.sendMessage("§cYou are not in a company.");
             return true;
         }
 
-        Company company = companyManager.getCompany(companyName);
+        Company company = playerCompany;
         if (company == null) {
             player.sendMessage("§cCompany not found.");
             return true;
@@ -545,7 +545,7 @@ public class CompanyCommandExecutor implements CommandExecutor, TabCompleter {
 
             // Confirm upgrade
             if (args.length < 2 || !args[1].equalsIgnoreCase("confirm")) {
-                player.sendMessage("§eYou are about to upgrade §l" + companyName + " §eto §6§lInternational§e.");
+                player.sendMessage("§eYou are about to upgrade §l" + playerCompany.getName() + " §eto §6§lInternational§e.");
                 player.sendMessage("§7Cost: §c" + economyManager.formatMoney(Company.INTERNATIONAL_UPGRADE_COST));
                 player.sendMessage("§7Member limit will increase from " + Company.NATIONAL_MEMBER_LIMIT + " to " + Company.INTERNATIONAL_MEMBER_LIMIT + ".");
                 player.sendMessage("§cType §e/entreprise international confirm §cto proceed.");
@@ -556,14 +556,14 @@ public class CompanyCommandExecutor implements CommandExecutor, TabCompleter {
             economyManager.getEconomy().withdrawPlayer(player, Company.INTERNATIONAL_UPGRADE_COST);
 
             // Upgrade to international
-            if (companyManager.upgradeToInternational(companyName)) {
-                player.sendMessage("§6§l" + companyName + " §6is now an International company!");
+            if (companyManager.upgradeToInternational(playerCompany.getName())) {
+                player.sendMessage("§6§l" + playerCompany.getName() + " §6is now an International company!");
                 player.sendMessage("§7Cost: §c" + economyManager.formatMoney(Company.INTERNATIONAL_UPGRADE_COST));
                 player.sendMessage("§aMember limit increased to " + Company.INTERNATIONAL_MEMBER_LIMIT + "!");
 
                 // Update Dynmap marker
                 if (dynmapManager != null && dynmapManager.isDynmapEnabled() && company.hasHeadquarters()) {
-                    dynmapManager.addOrUpdateCompanyMarker(companyManager.getCompany(companyName));
+                    dynmapManager.addOrUpdateCompanyMarker(playerCompany);
                 }
             } else {
                 // Refund if upgrade failed
@@ -586,11 +586,12 @@ public class CompanyCommandExecutor implements CommandExecutor, TabCompleter {
 
         if (args.length < 2) {
             // Show own company info
-            targetCompany = companyManager.getPlayerCompany(player.getUniqueId());
-            if (targetCompany == null) {
+            Company playerCompany = companyManager.getPlayerCompany(player.getUniqueId());
+            if (playerCompany == null) {
                 player.sendMessage("§cYou are not in a company. Specify a company name.");
                 return true;
             }
+            targetCompany = playerCompany.getName();
         } else {
             targetCompany = args[1];
         }
@@ -621,14 +622,14 @@ public class CompanyCommandExecutor implements CommandExecutor, TabCompleter {
     }
 
     private boolean handleDelete(Player player, String[] args) {
-        String companyName = companyManager.getPlayerCompany(player.getUniqueId());
+        Company playerCompany = companyManager.getPlayerCompany(player.getUniqueId());
 
-        if (companyName == null) {
+        if (playerCompany == null) {
             player.sendMessage("§cYou are not in a company.");
             return true;
         }
 
-        Company company = companyManager.getCompany(companyName);
+        Company company = playerCompany;
         if (company == null) {
             player.sendMessage("§cCompany not found.");
             return true;
@@ -649,14 +650,14 @@ public class CompanyCommandExecutor implements CommandExecutor, TabCompleter {
         }
 
         // Delete company
-        if (companyManager.deleteCompany(companyName)) {
-            player.sendMessage("§cCompany §l" + companyName + " §chas been deleted.");
+        if (companyManager.deleteCompany(playerCompany.getName())) {
+            player.sendMessage("§cCompany §l" + playerCompany.getName() + " §chas been deleted.");
 
             // Notify all online members
             for (UUID memberUUID : company.getMembers()) {
                 Player member = Bukkit.getPlayer(memberUUID);
                 if (member != null && member.isOnline() && !member.getUniqueId().equals(player.getUniqueId())) {
-                    member.sendMessage("§cYour company §l" + companyName + " §chas been deleted by the CEO.");
+                    member.sendMessage("§cYour company §l" + playerCompany.getName() + " §chas been deleted by the CEO.");
                 }
             }
         } else {
@@ -672,13 +673,13 @@ public class CompanyCommandExecutor implements CommandExecutor, TabCompleter {
             return true;
         }
 
-        String companyName = companyManager.getPlayerCompany(player.getUniqueId());
-        if (companyName == null) {
+        Company playerCompany = companyManager.getPlayerCompany(player.getUniqueId());
+        if (playerCompany == null) {
             player.sendMessage("§cYou are not in a company.");
             return true;
         }
 
-        Company company = companyManager.getCompany(companyName);
+        Company company = playerCompany;
         if (company == null) {
             player.sendMessage("§cCompany not found.");
             return true;
@@ -706,16 +707,16 @@ public class CompanyCommandExecutor implements CommandExecutor, TabCompleter {
 
         // Confirm transfer
         if (args.length < 3 || !args[2].equalsIgnoreCase("confirm")) {
-            player.sendMessage("§eYou are about to transfer ownership of §l" + companyName + " §eto §l" + target.getName() + "§e.");
+            player.sendMessage("§eYou are about to transfer ownership of §l" + company.getName() + " §eto §l" + target.getName() + "§e.");
             player.sendMessage("§c§lWARNING: You will lose CEO status!");
             player.sendMessage("§cType §e/entreprise transfer " + target.getName() + " confirm §cto proceed.");
             return true;
         }
 
         // Transfer ownership
-        if (companyManager.transferOwnership(companyName, target.getUniqueId(), target.getName())) {
-            player.sendMessage("§aYou have transferred ownership of §l" + companyName + " §ato §l" + target.getName() + "§a.");
-            target.sendMessage("§aYou are now the CEO of §l" + companyName + "§a!");
+        if (companyManager.transferOwnership(company.getName(), target.getUniqueId(), target.getName())) {
+            player.sendMessage("§aYou have transferred ownership of §l" + company.getName() + " §ato §l" + target.getName() + "§a.");
+            target.sendMessage("§aYou are now the CEO of §l" + company.getName() + "§a!");
 
             // Notify other members
             for (UUID memberUUID : company.getMembers()) {
@@ -735,19 +736,19 @@ public class CompanyCommandExecutor implements CommandExecutor, TabCompleter {
     }
 
     private boolean handleMembers(Player player) {
-        String companyName = companyManager.getPlayerCompany(player.getUniqueId());
-        if (companyName == null) {
+        Company playerCompany = companyManager.getPlayerCompany(player.getUniqueId());
+        if (playerCompany == null) {
             player.sendMessage(MSG_NOT_IN_COMPANY);
             return true;
         }
 
-        Company company = companyManager.getCompany(companyName);
+        Company company = playerCompany;
         if (company == null) {
             player.sendMessage(MSG_COMPANY_NOT_FOUND);
             return true;
         }
 
-        player.sendMessage("§6Members of §l" + companyName);
+        player.sendMessage("§6Members of §l" + company.getName());
         player.sendMessage("§7CEO: §6" + company.getCeoName());
 
         for (UUID memberUUID : company.getMembers()) {
@@ -762,13 +763,13 @@ public class CompanyCommandExecutor implements CommandExecutor, TabCompleter {
     }
 
     private boolean handleAccept(Player player, String[] args) {
-        String companyName = companyManager.getPlayerCompany(player.getUniqueId());
-        if (companyName == null) {
+        Company playerCompany = companyManager.getPlayerCompany(player.getUniqueId());
+        if (playerCompany == null) {
             player.sendMessage("§cYou are not in a company.");
             return true;
         }
 
-        Company company = companyManager.getCompany(companyName);
+        Company company = playerCompany;
         if (company == null) {
             player.sendMessage("§cCompany not found.");
             return true;
@@ -805,7 +806,7 @@ public class CompanyCommandExecutor implements CommandExecutor, TabCompleter {
 
             // Accept the offline/unknown player
             company.removeJoinRequest(pendingUUID);
-            companyManager.addMemberToCompany(companyName, pendingUUID, targetName);
+            companyManager.addMemberToCompany(company.getName(), pendingUUID, targetName);
             player.sendMessage("§aAccepted join request from §l" + targetName + "§a.");
             return true;
         }
@@ -825,9 +826,9 @@ public class CompanyCommandExecutor implements CommandExecutor, TabCompleter {
 
         // Accept the request
         company.removeJoinRequest(target.getUniqueId());
-        if (companyManager.addMemberToCompany(companyName, target.getUniqueId(), target.getName())) {
+        if (companyManager.addMemberToCompany(company.getName(), target.getUniqueId(), target.getName())) {
             player.sendMessage("§a§l" + target.getName() + " §ahas joined your company!");
-            target.sendMessage("§aYou have joined §l" + companyName + "§a!");
+            target.sendMessage("§aYou have joined §l" + company.getName() + "§a!");
 
             // Notify other members
             for (UUID memberUUID : company.getMembers()) {
@@ -846,13 +847,13 @@ public class CompanyCommandExecutor implements CommandExecutor, TabCompleter {
     }
 
     private boolean handleDeny(Player player, String[] args) {
-        String companyName = companyManager.getPlayerCompany(player.getUniqueId());
-        if (companyName == null) {
+        Company playerCompany = companyManager.getPlayerCompany(player.getUniqueId());
+        if (playerCompany == null) {
             player.sendMessage("§cYou are not in a company.");
             return true;
         }
 
-        Company company = companyManager.getCompany(companyName);
+        Company company = playerCompany;
         if (company == null) {
             player.sendMessage("§cCompany not found.");
             return true;
@@ -904,7 +905,7 @@ public class CompanyCommandExecutor implements CommandExecutor, TabCompleter {
         // Notify player if online
         Player target = Bukkit.getPlayer(targetUUID);
         if (target != null && target.isOnline()) {
-            target.sendMessage("§cYour join request to §l" + companyName + " §cwas denied.");
+            target.sendMessage("§cYour join request to §l" + company.getName() + " §cwas denied.");
         }
 
         return true;
@@ -916,13 +917,13 @@ public class CompanyCommandExecutor implements CommandExecutor, TabCompleter {
             return true;
         }
 
-        String companyName = companyManager.getPlayerCompany(player.getUniqueId());
-        if (companyName == null) {
+        Company playerCompany = companyManager.getPlayerCompany(player.getUniqueId());
+        if (playerCompany == null) {
             player.sendMessage("§cYou are not in a company.");
             return true;
         }
 
-        Company company = companyManager.getCompany(companyName);
+        Company company = playerCompany;
         if (company == null) {
             player.sendMessage("§cCompany not found.");
             return true;
@@ -963,7 +964,7 @@ public class CompanyCommandExecutor implements CommandExecutor, TabCompleter {
             // Notify the kicked player
             Player target = Bukkit.getPlayer(targetUUID);
             if (target != null && target.isOnline()) {
-                target.sendMessage("§cYou have been kicked from §l" + companyName + "§c.");
+                target.sendMessage("§cYou have been kicked from §l" + company.getName() + "§c.");
             }
         } else {
             player.sendMessage("§cFailed to kick member.");
@@ -973,13 +974,13 @@ public class CompanyCommandExecutor implements CommandExecutor, TabCompleter {
     }
 
     private boolean handleManage(Player player) {
-        String companyName = companyManager.getPlayerCompany(player.getUniqueId());
-        if (companyName == null) {
+        Company playerCompany = companyManager.getPlayerCompany(player.getUniqueId());
+        if (playerCompany == null) {
             player.sendMessage(MSG_NOT_IN_COMPANY);
             return true;
         }
 
-        Company company = companyManager.getCompany(companyName);
+        Company company = playerCompany;
         if (company == null) {
             player.sendMessage(MSG_COMPANY_NOT_FOUND);
             return true;
@@ -995,13 +996,13 @@ public class CompanyCommandExecutor implements CommandExecutor, TabCompleter {
     }
 
     private boolean handleRequests(Player player) {
-        String companyName = companyManager.getPlayerCompany(player.getUniqueId());
-        if (companyName == null) {
+        Company playerCompany = companyManager.getPlayerCompany(player.getUniqueId());
+        if (playerCompany == null) {
             player.sendMessage(MSG_NOT_IN_COMPANY);
             return true;
         }
 
-        Company company = companyManager.getCompany(companyName);
+        Company company = playerCompany;
         if (company == null) {
             player.sendMessage(MSG_COMPANY_NOT_FOUND);
             return true;
@@ -1193,9 +1194,9 @@ public class CompanyCommandExecutor implements CommandExecutor, TabCompleter {
                     // Suggest pending requests or members
                     if (sender instanceof Player) {
                         Player player = (Player) sender;
-                        String companyName = companyManager.getPlayerCompany(player.getUniqueId());
-                        if (companyName != null) {
-                            Company company = companyManager.getCompany(companyName);
+                        Company playerCompany = companyManager.getPlayerCompany(player.getUniqueId());
+                        if (playerCompany != null) {
+                            Company company = playerCompany;
                             if (company != null) {
                                 if (subCommand.equals("accept") || subCommand.equals("deny")) {
                                     for (UUID uuid : company.getPendingJoinRequests()) {
@@ -1217,9 +1218,9 @@ public class CompanyCommandExecutor implements CommandExecutor, TabCompleter {
                     // Suggest members
                     if (sender instanceof Player) {
                         Player player = (Player) sender;
-                        String companyName = companyManager.getPlayerCompany(player.getUniqueId());
-                        if (companyName != null) {
-                            Company company = companyManager.getCompany(companyName);
+                        Company playerCompany = companyManager.getPlayerCompany(player.getUniqueId());
+                        if (playerCompany != null) {
+                            Company company = playerCompany;
                             if (company != null) {
                                 for (UUID uuid : company.getMembers()) {
                                     if (!company.isCEO(uuid)) {
@@ -1259,9 +1260,9 @@ public class CompanyCommandExecutor implements CommandExecutor, TabCompleter {
                 // Suggest subsidiaries
                 if (sender instanceof Player) {
                     Player player = (Player) sender;
-                    String companyName = companyManager.getPlayerCompany(player.getUniqueId());
-                    if (companyName != null) {
-                        Company company = companyManager.getCompany(companyName);
+                    Company playerCompany = companyManager.getPlayerCompany(player.getUniqueId());
+                    if (playerCompany != null) {
+                        Company company = playerCompany;
                         if (company != null) {
                             completions.addAll(company.getSubsidiaries());
                         }

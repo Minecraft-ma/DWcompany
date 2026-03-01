@@ -1,4 +1,5 @@
 fr\dominatuin\dwcompany\EconomyManager$TransactionResult.class
+fr\dominatuin\dwcompany\storage\MySQLStorage$1.class
 fr\dominatuin\dwcompany\MessageManager.class
 fr\dominatuin\dwcompany\MainMenuGUI.class
 fr\dominatuin\dwcompany\storage\StorageProvider.class
@@ -6,14 +7,14 @@ fr\dominatuin\dwcompany\CompanyGUI.class
 fr\dominatuin\dwcompany\DynmapManager.class
 fr\dominatuin\dwcompany\Company.class
 fr\dominatuin\dwcompany\storage\BackupManager.class
-fr\dominatuin\dwcompany\storage\DataManager$3.class
 fr\dominatuin\dwcompany\EconomyManager.class
 fr\dominatuin\dwcompany\storage\YamlStorage.class
+fr\dominatuin\dwcompany\storage\JSONStorage.class
 fr\dominatuin\dwcompany\storage\DataManager.class
 fr\dominatuin\dwcompany\storage\MySQLStorage.class
 fr\dominatuin\dwcompany\CompanyManager.class
 fr\dominatuin\dwcompany\CompanyCommandExecutor.class
 fr\dominatuin\dwcompany\ConfigManager.class
 fr\dominatuin\dwcompany\storage\DataManager$1.class
+fr\dominatuin\dwcompany\CompanyGUI$GUIType.class
 fr\dominatuin\dwcompany\DWcompany.class
-fr\dominatuin\dwcompany\storage\DataManager$2.class

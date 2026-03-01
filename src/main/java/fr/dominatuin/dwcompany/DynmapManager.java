@@ -154,12 +154,12 @@ public class DynmapManager {
             );
 
             if (marker == null) {
-                plugin.getLogger().warning("Failed to create marker for company: " + company.getName());
+                plugin.getLogger().warning(String.format("Failed to create marker for company: %s", company.getName()));
                 return false;
             }
         }
 
-        plugin.getLogger().fine("Updated Dynmap marker for: " + company.getName());
+        plugin.getLogger().fine(String.format("Updated Dynmap marker for: %s", company.getName()));
         return true;
     }
 
@@ -179,7 +179,7 @@ public class DynmapManager {
 
         if (marker != null) {
             marker.deleteMarker();
-            plugin.getLogger().fine("Removed Dynmap marker for: " + companyName);
+            plugin.getLogger().fine(String.format("Removed Dynmap marker for: %s", companyName));
         }
 
         return true;
@@ -202,7 +202,7 @@ public class DynmapManager {
             }
         }
 
-        plugin.getLogger().info("Loaded " + count + " company markers on Dynmap.");
+        plugin.getLogger().info(String.format("Loaded %d company markers on Dynmap.", count));
     }
 
     /**

@@ -27,25 +27,17 @@ public interface StorageProvider {
     /**
      * Loads all companies from storage.
      *
-     * @return List of loaded companies
+     * @return Collection of loaded companies
      */
-    List<Company> loadCompanies();
+    Collection<Company> loadAllCompanies();
 
     /**
-     * Saves a single company to storage.
-     *
-     * @param company The company to save
-     * @return true if saved successfully
-     */
-    boolean saveCompany(Company company);
-
-    /**
-     * Saves multiple companies to storage.
+     * Saves all companies to storage.
      *
      * @param companies Collection of companies to save
      * @return true if all saved successfully
      */
-    boolean saveCompanies(Collection<Company> companies);
+    boolean saveAllCompanies(Collection<Company> companies);
 
     /**
      * Deletes a company from storage.

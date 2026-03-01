@@ -51,7 +51,7 @@ public class BackupManager {
     private void createBackupFolder() {
         if (!backupFolder.exists()) {
             backupFolder.mkdirs();
-            plugin.getLogger().info("Created backup folder: " + backupFolder.getPath());
+            plugin.getLogger().info(String.format("Created backup folder: %s", backupFolder.getPath()));
         }
     }
 
@@ -94,7 +94,7 @@ public class BackupManager {
                         StandardCopyOption.REPLACE_EXISTING);
             }
 
-            plugin.getLogger().info("Created backup: " + timestamp);
+            plugin.getLogger().info(String.format("Created backup: %s", timestamp));
 
             // Clean old backups
             cleanOldBackups();
@@ -123,7 +123,7 @@ public class BackupManager {
         int toDelete = backups.length - maxBackups;
         for (int i = 0; i < toDelete; i++) {
             deleteDirectory(backups[i]);
-            plugin.getLogger().info("Deleted old backup: " + backups[i].getName());
+            plugin.getLogger().info(String.format("Deleted old backup: %s", backups[i].getName()));
         }
     }
 
@@ -155,7 +155,7 @@ public class BackupManager {
     public boolean restoreBackup(String backupName) {
         File backupDir = new File(backupFolder, backupName);
         if (!backupDir.exists()) {
-            plugin.getLogger().warning("Backup not found: " + backupName);
+            plugin.getLogger().warning(String.format("Backup not found: %s", backupName));
             return false;
         }
 
@@ -168,7 +168,7 @@ public class BackupManager {
                         StandardCopyOption.REPLACE_EXISTING);
             }
 
-            plugin.getLogger().info("Restored backup: " + backupName);
+            plugin.getLogger().info(String.format("Restored backup: %s", backupName));
             return true;
 
         } catch (IOException e) {
